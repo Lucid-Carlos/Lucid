@@ -183,7 +183,7 @@ export default function Lucid() {
           <div className="fade-up" style={s.section}>
             <div style={s.eyebrow}>Pregunta mejor</div>
             <h1 style={s.heading}>¿Qué quieres<br/>saber o hacer?</h1>
-            <p style={s.body}>No te preocupes por ser preciso — eso lo hacemos nosotros.</p>
+            <p style={s.body}>Trae tu idea. Te damos el prompt perfecto en 60 segundos.</p>
             <textarea
               style={s.textarea}
               placeholder="Escribe tu idea aquí, aunque esté incompleta..."
