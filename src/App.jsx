@@ -1,37 +1,37 @@
 import { useState } from "react";
 
-const SYSTEM_PROMPT = `Eres un experto en prompt engineering. Ayudas al usuario a clarificar lo que quiere preguntar a un LLM.
+const SYSTEM_PROMPT = `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM.
 
-REGLAS ESTRICTAS DE FORMATO:
+STRICT FORMAT RULES:
 
-Si necesitas hacer una pregunta de clarificación, responde EXACTAMENTE así (sin nada más):
-PREGUNTA: [tu pregunta aquí]
-OPCION: [opción 1]
-OPCION: [opción 2]
-OPCION: [opción 3]
-OPCION: Otro / lo escribo yo
+If you need to ask a clarifying question, respond EXACTLY like this (nothing else):
+QUESTION: [your question here]
+OPTION: [option 1]
+OPTION: [option 2]
+OPTION: [option 3]
+OPTION: Other / I'll write it myself
 
-Si ya tienes suficiente información para generar el prompt final, responde EXACTAMENTE así (sin nada más):
-PROMPT: [el prompt optimizado aquí]
+If you already have enough information to generate the final prompt, respond EXACTLY like this (nothing else):
+PROMPT: [the optimized prompt here]
 
-REGLAS:
-- Máximo 3 preguntas en total durante la conversación
-- Las opciones deben ser cortas (máximo 6 palabras)
-- El prompt final debe ser específico, con contexto y rol si aplica
-- NO escribas nada fuera de este formato
-- NO uses markdown, JSON, ni explicaciones`;
+RULES:
+- Maximum 3 questions total during the conversation
+- Options must be short (maximum 6 words)
+- The final prompt must be specific, with context and role if applicable
+- Do NOT write anything outside this format
+- Do NOT use markdown, JSON, or explanations`;
 
 function parseResponse(raw) {
   const text = raw.trim();
   if (text.startsWith("PROMPT:")) {
     return { type: "prompt", content: text.replace("PROMPT:", "").trim() };
   }
-  if (text.includes("PREGUNTA:")) {
+  if (text.includes("QUESTION:")) {
     const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-    const questionLine = lines.find(l => l.startsWith("PREGUNTA:"));
-    const options = lines.filter(l => l.startsWith("OPCION:")).map(l => l.replace("OPCION:", "").trim());
+    const questionLine = lines.find(l => l.startsWith("QUESTION:"));
+    const options = lines.filter(l => l.startsWith("OPTION:")).map(l => l.replace("OPTION:", "").trim());
     if (questionLine && options.length > 0) {
-      return { type: "question", question: questionLine.replace("PREGUNTA:", "").trim(), options };
+      return { type: "question", question: questionLine.replace("QUESTION:", "").trim(), options };
     }
   }
   return { type: "prompt", content: text };
@@ -53,11 +53,11 @@ export default function Lucid() {
     const response = await fetch("/.netlify/functions/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 500, system: SYSTEM_PROMPT, messages }),
+      body: JSON.stringify({ system: SYSTEM_PROMPT, messages }),
     });
     const text = await response.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { throw new Error("Error de red."); }
+    try { data = JSON.parse(text); } catch(e) { throw new Error("Network error. Please try again."); }
     if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
     const raw = data.content.map(b => b.text || "").join("");
     return parseResponse(raw);
@@ -90,7 +90,7 @@ export default function Lucid() {
     if (answer === "__custom__") { setStage("custom"); return; }
     const newHistory = [
       ...history,
-      { role: "assistant", content: `PREGUNTA: ${currentQuestion.question}\n${currentQuestion.options.map(o => `OPCION: ${o}`).join("\n")}` },
+      { role: "assistant", content: `QUESTION: ${currentQuestion.question}\n${currentQuestion.options.map(o => `OPTION: ${o}`).join("\n")}` },
       { role: "user", content: answer },
     ];
     setLoading(true); setError("");
@@ -150,9 +150,6 @@ export default function Lucid() {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
-        @keyframes progressFill {
-          from { width: 0%; }
-        }
         .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
         .opt:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .opt:active { transform: scale(0.99); }
@@ -163,7 +160,6 @@ export default function Lucid() {
         .progress-bar { transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
       `}</style>
 
-      {/* Header */}
       <header style={s.header}>
         <div style={s.wordmark}>Lucid</div>
         <div style={s.headerRight}>
@@ -171,22 +167,20 @@ export default function Lucid() {
         </div>
       </header>
 
-      {/* Progress line */}
       <div style={s.progressTrack}>
         <div className="progress-bar" style={{...s.progressFill, width: `${progress}%`}} />
       </div>
 
-      {/* Main */}
       <main style={s.main}>
 
         {stage === "input" && (
           <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>CONVIERTE IDEAS SIN FORMA EN PROMPTS PRECISOS</div>
-            <h1 style={s.heading}>Describe el resultado<br/>que quieres obtener</h1>
-            <p style={s.body}>Lucid transforma lo que quieres lograr en la instrucción exacta para obtener mejores resultados con IA.</p>
+            <div style={s.eyebrow}>Turn vague ideas into precise prompts</div>
+            <h1 style={s.heading}>Describe the result<br/>you want to achieve</h1>
+            <p style={s.body}>Bring your idea. We'll give you the perfect prompt in 60 seconds.</p>
             <textarea
               style={s.textarea}
-              placeholder="Escribe tu idea aquí, aunque esté incompleta..."
+              placeholder="Write your idea here, even if it's incomplete..."
               value={userInput}
               onChange={e => setUserInput(e.target.value)}
               rows={4}
@@ -199,18 +193,18 @@ export default function Lucid() {
               onClick={handleSubmitInput}
               disabled={loading || !userInput.trim()}
             >
-              {loading ? <span style={s.spinner} /> : "Analizar →"}
+              {loading ? <span style={s.spinner} /> : "Analyze →"}
             </button>
           </div>
         )}
 
         {stage === "questioning" && currentQuestion && (
           <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Pregunta {questionCount}</div>
+            <div style={s.eyebrow}>Question {questionCount}</div>
             <h2 style={s.heading}>{currentQuestion.question}</h2>
             <div style={s.options}>
               {currentQuestion.options?.map((opt, i) => {
-                const isCustom = opt.toLowerCase().includes("otro") || opt.toLowerCase().includes("escribo");
+                const isCustom = opt.toLowerCase().includes("other") || opt.toLowerCase().includes("write");
                 return (
                   <button
                     key={i}
@@ -231,11 +225,11 @@ export default function Lucid() {
 
         {stage === "custom" && (
           <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Tu respuesta</div>
+            <div style={s.eyebrow}>Your answer</div>
             <h2 style={s.heading}>{currentQuestion?.question}</h2>
             <textarea
               style={s.textarea}
-              placeholder="Escribe tu respuesta..."
+              placeholder="Write your answer here..."
               value={customAnswer}
               onChange={e => setCustomAnswer(e.target.value)}
               rows={3}
@@ -243,14 +237,14 @@ export default function Lucid() {
             />
             {error && <p style={s.error}>{error}</p>}
             <div style={s.row}>
-              <button className="ghost" style={s.ghost} onClick={() => setStage("questioning")}>← Volver</button>
+              <button className="ghost" style={s.ghost} onClick={() => setStage("questioning")}>← Back</button>
               <button
                 className="primary"
                 style={{...s.primary, flex: 1, opacity: loading || !customAnswer.trim() ? 0.4 : 1}}
                 onClick={handleCustomAnswer}
                 disabled={loading || !customAnswer.trim()}
               >
-                {loading ? <span style={s.spinner} /> : "Continuar →"}
+                {loading ? <span style={s.spinner} /> : "Continue →"}
               </button>
             </div>
           </div>
@@ -258,20 +252,20 @@ export default function Lucid() {
 
         {stage === "final" && (
           <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Tu prompt</div>
-            <h2 style={{...s.heading, fontSize: 22}}>Listo para usar</h2>
-            <p style={s.body}>Cópialo y pégalo en Claude, ChatGPT o Gemini.</p>
+            <div style={s.eyebrow}>Your prompt is ready</div>
+            <h2 style={{...s.heading, fontSize: 22}}>Ready to use</h2>
+            <p style={s.body}>Copy and paste it into Claude, ChatGPT or Gemini.</p>
             <div style={s.promptBox}>
               <p style={s.promptText}>{finalPrompt}</p>
             </div>
             <div style={s.row}>
-              <button className="ghost" style={s.ghost} onClick={handleReset}>← Nuevo</button>
+              <button className="ghost" style={s.ghost} onClick={handleReset}>← New</button>
               <button
                 className="copy"
                 style={{...s.primary, flex: 1, background: copied ? "#1A1A1A" : "#F5F3EF", color: copied ? "#F5F3EF" : "#1A1A1A", border: "1.5px solid #1A1A1A"}}
                 onClick={handleCopy}
               >
-                {copied ? "✓ Copiado" : "Copiar prompt"}
+                {copied ? "✓ Copied" : "Copy prompt"}
               </button>
             </div>
           </div>
@@ -280,7 +274,7 @@ export default function Lucid() {
       </main>
 
       <footer style={s.footer}>
-        <span>Lucid · Hecho para pensar mejor antes de preguntar</span>
+        <span>Lucid · Made to think better before you ask</span>
       </footer>
     </div>
   );
@@ -310,6 +304,6 @@ const s = {
   promptText: { fontSize: 13, color: "#333", lineHeight: 1.75, fontFamily: "'DM Mono', monospace", whiteSpace: "pre-wrap" },
   error: { fontSize: 12, color: "#C0392B", marginBottom: 12, fontFamily: "'DM Mono', monospace" },
   loadingRow: { display: "flex", justifyContent: "center", paddingTop: 16 },
-  spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
+  spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(0,0,0,0.1)", borderTop: "2px solid #1A1A1A", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
   footer: { padding: "20px 28px", borderTop: "1px solid #E8E4DC", fontSize: 11, color: "#BBB", textAlign: "center", letterSpacing: "0.02em" },
 };
