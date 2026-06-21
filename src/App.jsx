@@ -181,7 +181,7 @@ export default function Lucid() {
 
         {stage === "input" && (
           <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Pregunta mejor</div>
+            <div style={s.eyebrow}>Instrucciones precisas para cualquier IA</div>
             <h1 style={s.heading}>¿Qué quieres<br/>saber o hacer?</h1>
             <p style={s.body}>Trae tu idea. Te damos el prompt perfecto en 60 segundos.</p>
             <textarea
