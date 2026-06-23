@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const SYSTEM_PROMPT = `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM.
 
@@ -37,6 +37,22 @@ function parseResponse(raw) {
   return { type: "prompt", content: text };
 }
 
+function saveToHistory(idea, prompt) {
+  const history = JSON.parse(localStorage.getItem("lucid_history") || "[]");
+  const entry = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    idea: idea.slice(0, 80) + (idea.length > 80 ? "..." : ""),
+    prompt,
+  };
+  history.unshift(entry);
+  localStorage.setItem("lucid_history", JSON.stringify(history.slice(0, 50)));
+}
+
+function getHistory() {
+  return JSON.parse(localStorage.getItem("lucid_history") || "[]");
+}
+
 export default function Lucid() {
   const [stage, setStage] = useState("input");
   const [userInput, setUserInput] = useState("");
@@ -47,7 +63,15 @@ export default function Lucid() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
   const [customAnswer, setCustomAnswer] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+  const [promptHistory, setPromptHistory] = useState([]);
+  const [originalIdea, setOriginalIdea] = useState("");
+
+  useEffect(() => {
+    setPromptHistory(getHistory());
+  }, []);
 
   async function callClaude(messages) {
     const response = await fetch("/.netlify/functions/claude", {
@@ -70,6 +94,8 @@ export default function Lucid() {
       setQuestionCount(q => q + 1);
       setStage("questioning");
     } else {
+      saveToHistory(originalIdea, result.content || "");
+      setPromptHistory(getHistory());
       setFinalPrompt(result.content || "");
       setStage("final");
     }
@@ -77,6 +103,7 @@ export default function Lucid() {
 
   async function handleSubmitInput() {
     if (!userInput.trim()) return;
+    setOriginalIdea(userInput.trim());
     setLoading(true); setError("");
     try {
       const msgs = [{ role: "user", content: userInput.trim() }];
@@ -108,29 +135,37 @@ export default function Lucid() {
     await handleAnswer(answer);
   }
 
-  function handleCopy() {
+  function handleCopy(text, id = null) {
+    const doCopy = () => {
+      if (id) { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); }
+      else { setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    };
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(finalPrompt).then(() => {
-          setCopied(true); setTimeout(() => setCopied(false), 2000);
-        }).catch(() => fallbackCopy());
-      } else { fallbackCopy(); }
-    } catch(e) { fallbackCopy(); }
+        navigator.clipboard.writeText(text).then(doCopy).catch(() => fallbackCopy(text, doCopy));
+      } else { fallbackCopy(text, doCopy); }
+    } catch(e) { fallbackCopy(text, doCopy); }
   }
 
-  function fallbackCopy() {
+  function fallbackCopy(text, cb) {
     const el = document.createElement("textarea");
-    el.value = finalPrompt;
+    el.value = text;
     el.style.position = "fixed"; el.style.opacity = "0";
     document.body.appendChild(el); el.focus(); el.select();
     document.execCommand("copy"); document.body.removeChild(el);
-    setCopied(true); setTimeout(() => setCopied(false), 2000);
+    cb();
   }
 
   function handleReset() {
     setStage("input"); setUserInput(""); setHistory([]);
     setCurrentQuestion(null); setQuestionCount(0);
-    setFinalPrompt(""); setError(""); setCopied(false); setCustomAnswer("");
+    setFinalPrompt(""); setError(""); setCopied(false);
+    setCustomAnswer(""); setOriginalIdea("");
+  }
+
+  function clearHistory() {
+    localStorage.removeItem("lucid_history");
+    setPromptHistory([]);
   }
 
   const progress = stage === "input" ? 0 : stage === "final" ? 100 : questionCount * 30;
@@ -143,14 +178,11 @@ export default function Lucid() {
         body { background: #F5F3EF; }
         textarea { font-family: 'DM Mono', monospace; resize: none; }
         textarea:focus { outline: none; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .slide-in { animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards; }
         .opt:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .opt:active { transform: scale(0.99); }
         .primary:hover { background: #2A2A2A !important; }
@@ -158,11 +190,25 @@ export default function Lucid() {
         .ghost:hover { border-color: #1A1A1A !important; color: #1A1A1A !important; }
         .copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .progress-bar { transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+        .hist-btn:hover { background: #ECEAE4 !important; }
+        .hist-copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
+        .clear-btn:hover { color: #C0392B !important; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D8D4CC; border-radius: 2px; }
       `}</style>
 
       <header style={s.header}>
         <div style={s.wordmark}>Lucid</div>
         <div style={s.headerRight}>
+          <button
+            style={{...s.historyBtn, background: showHistory ? "#1A1A1A" : "transparent", color: showHistory ? "#F5F3EF" : "#888", border: showHistory ? "1px solid #1A1A1A" : "1px solid #D8D4CC"}}
+            className="hist-btn"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {promptHistory.length > 0 && <span style={s.badge}>{promptHistory.length}</span>}
+            History
+          </button>
           <span style={s.pill}>Beta</span>
         </div>
       </header>
@@ -171,107 +217,140 @@ export default function Lucid() {
         <div className="progress-bar" style={{...s.progressFill, width: `${progress}%`}} />
       </div>
 
-      <main style={s.main}>
+      <div style={s.layout}>
 
-        {stage === "input" && (
-          <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Turn vague ideas into precise prompts</div>
-            <h1 style={s.heading}>Describe the result<br/>you want to achieve</h1>
-            <p style={s.body}>Bring your idea. We'll give you the perfect prompt in 60 seconds.</p>
-            <textarea
-              style={s.textarea}
-              placeholder="Write your idea here, even if it's incomplete..."
-              value={userInput}
-              onChange={e => setUserInput(e.target.value)}
-              rows={4}
-              autoFocus
-            />
-            {error && <p style={s.error}>{error}</p>}
-            <button
-              className="primary"
-              style={{...s.primary, opacity: loading || !userInput.trim() ? 0.4 : 1}}
-              onClick={handleSubmitInput}
-              disabled={loading || !userInput.trim()}
-            >
-              {loading ? <span style={s.spinner} /> : "Analyze →"}
-            </button>
-          </div>
-        )}
+        {/* MAIN CONTENT */}
+        <main style={{...s.main, marginRight: showHistory ? 340 : 0, transition: "margin-right 0.3s cubic-bezier(0.16,1,0.3,1)"}}>
 
-        {stage === "questioning" && currentQuestion && (
-          <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Question {questionCount}</div>
-            <h2 style={s.heading}>{currentQuestion.question}</h2>
-            <div style={s.options}>
-              {currentQuestion.options?.map((opt, i) => {
-                const isCustom = opt.toLowerCase().includes("other") || opt.toLowerCase().includes("write");
-                return (
-                  <button
-                    key={i}
-                    className="opt"
-                    style={{...s.opt, ...(isCustom ? s.optMuted : {})}}
-                    onClick={() => isCustom ? handleAnswer("__custom__") : handleAnswer(opt)}
-                    disabled={loading}
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
-            </div>
-            {loading && <div style={s.loadingRow}><span style={s.spinner} /></div>}
-            {error && <p style={s.error}>{error}</p>}
-          </div>
-        )}
-
-        {stage === "custom" && (
-          <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Your answer</div>
-            <h2 style={s.heading}>{currentQuestion?.question}</h2>
-            <textarea
-              style={s.textarea}
-              placeholder="Write your answer here..."
-              value={customAnswer}
-              onChange={e => setCustomAnswer(e.target.value)}
-              rows={3}
-              autoFocus
-            />
-            {error && <p style={s.error}>{error}</p>}
-            <div style={s.row}>
-              <button className="ghost" style={s.ghost} onClick={() => setStage("questioning")}>← Back</button>
+          {stage === "input" && (
+            <div className="fade-up" style={s.section}>
+              <div style={s.eyebrow}>Turn vague ideas into precise prompts</div>
+              <h1 style={s.heading}>Describe the result<br/>you want to achieve</h1>
+              <p style={s.body}>Bring your idea. We'll give you the perfect prompt in 60 seconds.</p>
+              <textarea
+                style={s.textarea}
+                placeholder="Write your idea here, even if it's incomplete..."
+                value={userInput}
+                onChange={e => setUserInput(e.target.value)}
+                rows={4}
+                autoFocus
+              />
+              {error && <p style={s.error}>{error}</p>}
               <button
                 className="primary"
-                style={{...s.primary, flex: 1, opacity: loading || !customAnswer.trim() ? 0.4 : 1}}
-                onClick={handleCustomAnswer}
-                disabled={loading || !customAnswer.trim()}
+                style={{...s.primary, opacity: loading || !userInput.trim() ? 0.4 : 1}}
+                onClick={handleSubmitInput}
+                disabled={loading || !userInput.trim()}
               >
-                {loading ? <span style={s.spinner} /> : "Continue →"}
+                {loading ? <span style={s.spinner} /> : "Analyze →"}
               </button>
+            </div>
+          )}
+
+          {stage === "questioning" && currentQuestion && (
+            <div className="fade-up" style={s.section}>
+              <div style={s.eyebrow}>Question {questionCount}</div>
+              <h2 style={s.heading}>{currentQuestion.question}</h2>
+              <div style={s.options}>
+                {currentQuestion.options?.map((opt, i) => {
+                  const isCustom = opt.toLowerCase().includes("other") || opt.toLowerCase().includes("write");
+                  return (
+                    <button key={i} className="opt"
+                      style={{...s.opt, ...(isCustom ? s.optMuted : {})}}
+                      onClick={() => isCustom ? handleAnswer("__custom__") : handleAnswer(opt)}
+                      disabled={loading}>
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {loading && <div style={s.loadingRow}><span style={{...s.spinner, borderTopColor: "#1A1A1A", borderColor: "rgba(0,0,0,0.1)"}} /></div>}
+              {error && <p style={s.error}>{error}</p>}
+            </div>
+          )}
+
+          {stage === "custom" && (
+            <div className="fade-up" style={s.section}>
+              <div style={s.eyebrow}>Your answer</div>
+              <h2 style={s.heading}>{currentQuestion?.question}</h2>
+              <textarea
+                style={s.textarea}
+                placeholder="Write your answer here..."
+                value={customAnswer}
+                onChange={e => setCustomAnswer(e.target.value)}
+                rows={3}
+                autoFocus
+              />
+              {error && <p style={s.error}>{error}</p>}
+              <div style={s.row}>
+                <button className="ghost" style={s.ghost} onClick={() => setStage("questioning")}>← Back</button>
+                <button className="primary"
+                  style={{...s.primary, flex: 1, opacity: loading || !customAnswer.trim() ? 0.4 : 1}}
+                  onClick={handleCustomAnswer} disabled={loading || !customAnswer.trim()}>
+                  {loading ? <span style={s.spinner} /> : "Continue →"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {stage === "final" && (
+            <div className="fade-up" style={s.section}>
+              <div style={s.eyebrow}>Your prompt is ready</div>
+              <h2 style={{...s.heading, fontSize: 22}}>Ready to use</h2>
+              <p style={s.body}>Copy and paste it into Claude, ChatGPT or Gemini.</p>
+              <div style={s.promptBox}>
+                <p style={s.promptText}>{finalPrompt}</p>
+              </div>
+              <div style={s.row}>
+                <button className="ghost" style={s.ghost} onClick={handleReset}>← New</button>
+                <button className="copy"
+                  style={{...s.primary, flex: 1, background: copied ? "#1A1A1A" : "#F5F3EF", color: copied ? "#F5F3EF" : "#1A1A1A", border: "1.5px solid #1A1A1A"}}
+                  onClick={() => handleCopy(finalPrompt)}>
+                  {copied ? "✓ Copied" : "Copy prompt"}
+                </button>
+              </div>
+            </div>
+          )}
+
+        </main>
+
+        {/* HISTORY PANEL */}
+        {showHistory && (
+          <div className="slide-in" style={s.historyPanel}>
+            <div style={s.historyHeader}>
+              <span style={s.historyTitle}>History</span>
+              {promptHistory.length > 0 && (
+                <button className="clear-btn" style={s.clearBtn} onClick={clearHistory}>Clear all</button>
+              )}
+            </div>
+            <div style={s.historyList}>
+              {promptHistory.length === 0 ? (
+                <div style={s.historyEmpty}>
+                  <p style={{fontSize: 13, color: "#999", textAlign: "center", lineHeight: 1.6}}>
+                    Your generated prompts will appear here.
+                  </p>
+                </div>
+              ) : (
+                promptHistory.map(entry => (
+                  <div key={entry.id} style={s.historyCard}>
+                    <div style={s.historyDate}>{entry.date}</div>
+                    <div style={s.historyIdea}>"{entry.idea}"</div>
+                    <div style={s.historyPrompt}>{entry.prompt}</div>
+                    <button
+                      className="hist-copy"
+                      style={{...s.histCopyBtn, background: copiedId === entry.id ? "#1A1A1A" : "transparent", color: copiedId === entry.id ? "#F5F3EF" : "#888"}}
+                      onClick={() => handleCopy(entry.prompt, entry.id)}
+                    >
+                      {copiedId === entry.id ? "✓ Copied" : "Copy"}
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
 
-        {stage === "final" && (
-          <div className="fade-up" style={s.section}>
-            <div style={s.eyebrow}>Your prompt is ready</div>
-            <h2 style={{...s.heading, fontSize: 22}}>Ready to use</h2>
-            <p style={s.body}>Copy and paste it into Claude, ChatGPT or Gemini.</p>
-            <div style={s.promptBox}>
-              <p style={s.promptText}>{finalPrompt}</p>
-            </div>
-            <div style={s.row}>
-              <button className="ghost" style={s.ghost} onClick={handleReset}>← New</button>
-              <button
-                className="copy"
-                style={{...s.primary, flex: 1, background: copied ? "#1A1A1A" : "#F5F3EF", color: copied ? "#F5F3EF" : "#1A1A1A", border: "1.5px solid #1A1A1A"}}
-                onClick={handleCopy}
-              >
-                {copied ? "✓ Copied" : "Copy prompt"}
-              </button>
-            </div>
-          </div>
-        )}
-
-      </main>
+      </div>
 
       <footer style={s.footer}>
         <span>Lucid · Made to think better before you ask</span>
@@ -282,13 +361,16 @@ export default function Lucid() {
 
 const s = {
   root: { minHeight: "100vh", background: "#F5F3EF", display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", color: "#1A1A1A" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 28px", borderBottom: "1px solid #E8E4DC" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid #E8E4DC", position: "sticky", top: 0, background: "#F5F3EF", zIndex: 10 },
   wordmark: { fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: "#1A1A1A" },
-  headerRight: { display: "flex", alignItems: "center", gap: 12 },
+  headerRight: { display: "flex", alignItems: "center", gap: 10 },
+  historyBtn: { fontSize: 12, fontWeight: 500, padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6, position: "relative" },
+  badge: { background: "#1A1A1A", color: "#F5F3EF", fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 10, lineHeight: 1.4 },
   pill: { fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", color: "#888", background: "#ECEAE4", padding: "3px 10px", borderRadius: 99, textTransform: "uppercase" },
   progressTrack: { height: 2, background: "#E8E4DC", width: "100%" },
   progressFill: { height: "100%", background: "#1A1A1A", borderRadius: 99 },
-  main: { flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "60px 24px 40px" },
+  layout: { flex: 1, display: "flex", position: "relative" },
+  main: { flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "60px 24px 40px", transition: "margin-right 0.3s" },
   section: { width: "100%", maxWidth: 480 },
   eyebrow: { fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", color: "#999", textTransform: "uppercase", marginBottom: 14 },
   heading: { fontSize: 28, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.2, color: "#1A1A1A", marginBottom: 14 },
@@ -306,4 +388,15 @@ const s = {
   loadingRow: { display: "flex", justifyContent: "center", paddingTop: 16 },
   spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(0,0,0,0.1)", borderTop: "2px solid #1A1A1A", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
   footer: { padding: "20px 28px", borderTop: "1px solid #E8E4DC", fontSize: 11, color: "#BBB", textAlign: "center", letterSpacing: "0.02em" },
+  historyPanel: { position: "fixed", top: 57, right: 0, width: 320, height: "calc(100vh - 57px)", background: "#FAFAF7", borderLeft: "1px solid #E8E4DC", display: "flex", flexDirection: "column", zIndex: 9 },
+  historyHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #E8E4DC" },
+  historyTitle: { fontSize: 13, fontWeight: 600, color: "#1A1A1A", letterSpacing: "-0.2px" },
+  clearBtn: { fontSize: 11, color: "#BBB", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s" },
+  historyList: { flex: 1, overflowY: "auto", padding: "12px" },
+  historyEmpty: { display: "flex", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" },
+  historyCard: { background: "#fff", border: "1px solid #E8E4DC", borderRadius: 10, padding: "14px", marginBottom: 10 },
+  historyDate: { fontSize: 10, color: "#BBB", fontFamily: "'DM Mono', monospace", marginBottom: 6, letterSpacing: "0.3px" },
+  historyIdea: { fontSize: 12, color: "#888", lineHeight: 1.5, marginBottom: 8, fontStyle: "italic" },
+  historyPrompt: { fontSize: 12, color: "#444", lineHeight: 1.6, fontFamily: "'DM Mono', monospace", marginBottom: 10, maxHeight: 80, overflowY: "auto", whiteSpace: "pre-wrap" },
+  histCopyBtn: { fontSize: 11, fontWeight: 500, padding: "4px 10px", border: "1px solid #E8E4DC", borderRadius: 6, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
 };
