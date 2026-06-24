@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 const SYSTEM_PROMPT = `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM or AI image/video tool.
 
-The user may provide an image as reference. If they do, analyze it and use it to generate a more specific and accurate prompt.
+The user may provide one or more images as reference. If they do, analyze them and use them to generate a more specific and accurate prompt.
 
 STRICT FORMAT RULES:
 
@@ -20,7 +20,7 @@ RULES:
 - Maximum 3 questions total during the conversation
 - Options must be short (maximum 6 words)
 - The final prompt must be specific, with context and role if applicable
-- If an image was provided, describe its key visual elements in the prompt
+- If images were provided, describe their key visual elements in the prompt
 - Do NOT write anything outside this format
 - Do NOT use markdown, JSON, or explanations`;
 
@@ -56,6 +56,8 @@ function getHistory() {
   return JSON.parse(localStorage.getItem("bluedinosauurai_history") || "[]");
 }
 
+const MAX_IMAGES = 5;
+
 export default function BlueDinosaurAI() {
   const [stage, setStage] = useState("input");
   const [userInput, setUserInput] = useState("");
@@ -71,9 +73,7 @@ export default function BlueDinosaurAI() {
   const [showHistory, setShowHistory] = useState(false);
   const [promptHistory, setPromptHistory] = useState([]);
   const [originalIdea, setOriginalIdea] = useState("");
-  const [imageBase64, setImageBase64] = useState(null);
-  const [imageMediaType, setImageMediaType] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [images, setImages] = useState([]); // [{base64, mediaType, preview}]
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -81,34 +81,46 @@ export default function BlueDinosaurAI() {
   }, []);
 
   function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
     const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    if (!validTypes.includes(file.type)) {
-      setError("Please upload a JPG, PNG, GIF or WebP image.");
+    const remaining = MAX_IMAGES - images.length;
+
+    if (remaining <= 0) {
+      setError(`Maximum ${MAX_IMAGES} images allowed.`);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image must be smaller than 5MB.");
-      return;
-    }
+
+    const filesToProcess = files.slice(0, remaining);
     setError("");
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target.result;
-      const base64 = result.split(",")[1];
-      setImageBase64(base64);
-      setImageMediaType(file.type);
-      setImagePreview(result);
-    };
-    reader.readAsDataURL(file);
+
+    filesToProcess.forEach(file => {
+      if (!validTypes.includes(file.type)) {
+        setError("Only JPG, PNG, GIF or WebP images are allowed.");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Each image must be smaller than 5MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target.result;
+        const base64 = result.split(",")[1];
+        setImages(prev => {
+          if (prev.length >= MAX_IMAGES) return prev;
+          return [...prev, { base64, mediaType: file.type, preview: result }];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function removeImage() {
-    setImageBase64(null);
-    setImageMediaType(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  function removeImage(index) {
+    setImages(prev => prev.filter((_, i) => i !== index));
   }
 
   async function callClaude(messages) {
@@ -140,16 +152,19 @@ export default function BlueDinosaurAI() {
   }
 
   async function handleSubmitInput() {
-    if (!userInput.trim() && !imageBase64) return;
-    const idea = userInput.trim() || "Generate a prompt based on this image";
+    if (!userInput.trim() && images.length === 0) return;
+    const idea = userInput.trim() || "Generate a prompt based on these images";
     setOriginalIdea(idea);
     setLoading(true); setError("");
     try {
       let userContent;
-      if (imageBase64) {
+      if (images.length > 0) {
         userContent = [
-          { type: "image", source: { type: "base64", media_type: imageMediaType, data: imageBase64 } },
-          { type: "text", text: userInput.trim() || "Generate a prompt based on this image" },
+          ...images.map(img => ({
+            type: "image",
+            source: { type: "base64", media_type: img.mediaType, data: img.base64 }
+          })),
+          { type: "text", text: userInput.trim() || "Generate a prompt based on these images" },
         ];
       } else {
         userContent = userInput.trim();
@@ -209,7 +224,7 @@ export default function BlueDinosaurAI() {
     setCurrentQuestion(null); setQuestionCount(0);
     setFinalPrompt(""); setError(""); setCopied(false);
     setCustomAnswer(""); setOriginalIdea("");
-    removeImage();
+    setImages([]);
   }
 
   function clearHistory() {
@@ -218,7 +233,7 @@ export default function BlueDinosaurAI() {
   }
 
   const progress = stage === "input" ? 0 : stage === "final" ? 100 : questionCount * 30;
-  const canSubmit = userInput.trim() || imageBase64;
+  const canSubmit = userInput.trim() || images.length > 0;
 
   return (
     <div style={s.root}>
@@ -244,7 +259,7 @@ export default function BlueDinosaurAI() {
         .hist-copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .clear-btn:hover { color: #C0392B !important; }
         .upload-btn:hover { border-color: #1A1A1A !important; color: #1A1A1A !important; }
-        .remove-img:hover { color: #C0392B !important; }
+        .remove-img:hover { background: rgba(192,57,43,0.15) !important; color: #C0392B !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #D8D4CC; border-radius: 2px; }
@@ -277,33 +292,59 @@ export default function BlueDinosaurAI() {
             <div className="fade-up" style={s.section}>
               <div style={s.eyebrow}>Turn vague ideas into precise prompts</div>
               <h1 style={s.heading}>Describe the result<br/>you want to achieve</h1>
-              <p style={s.body}>Bring your idea or upload an image. We'll give you the perfect prompt in 60 seconds.</p>
+              <p style={s.body}>Bring your idea or upload up to 5 images. We'll give you the perfect prompt in 60 seconds.</p>
 
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
+                multiple
                 style={{ display: "none" }}
                 onChange={handleImageUpload}
               />
 
-              {imagePreview ? (
-                <div style={s.imagePreviewContainer}>
-                  <img src={imagePreview} alt="Uploaded" style={s.imagePreview} />
-                  <button className="remove-img" style={s.removeImageBtn} onClick={removeImage}>
-                    ✕ Remove image
-                  </button>
+              {/* IMAGE GRID */}
+              {images.length > 0 && (
+                <div style={s.imageGrid}>
+                  {images.map((img, i) => (
+                    <div key={i} style={s.imageThumbnailContainer}>
+                      <img src={img.preview} alt={`Upload ${i + 1}`} style={s.imageThumbnail} />
+                      <button
+                        className="remove-img"
+                        style={s.removeImageBtn}
+                        onClick={() => removeImage(i)}
+                        title="Remove image"
+                      >✕</button>
+                    </div>
+                  ))}
+                  {images.length < MAX_IMAGES && (
+                    <button
+                      className="upload-btn"
+                      style={s.addMoreBtn}
+                      onClick={() => fileInputRef.current?.click()}
+                      title={`Add more images (${images.length}/${MAX_IMAGES})`}
+                    >
+                      <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
+                      <span style={{ fontSize: 10, marginTop: 4 }}>{images.length}/{MAX_IMAGES}</span>
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <button className="upload-btn" style={s.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+              )}
+
+              {images.length === 0 && (
+                <button
+                  className="upload-btn"
+                  style={s.uploadBtn}
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <span style={{ fontSize: 18, marginRight: 8 }}>📎</span>
-                  Upload an image (optional)
+                  Upload images (optional, up to 5)
                 </button>
               )}
 
               <textarea
                 style={{...s.textarea, marginTop: 12}}
-                placeholder={imageBase64 ? "Describe what you want to do with this image (optional)..." : "Write your idea here, even if it's incomplete..."}
+                placeholder={images.length > 0 ? "Describe what you want to do with these images (optional)..." : "Write your idea here, even if it's incomplete..."}
                 value={userInput}
                 onChange={e => setUserInput(e.target.value)}
                 rows={4}
@@ -450,9 +491,11 @@ const s = {
   body: { fontSize: 14, color: "#777", lineHeight: 1.6, marginBottom: 24, fontWeight: 400 },
   textarea: { width: "100%", background: "#ECEAE4", border: "1.5px solid transparent", borderRadius: 10, padding: "14px 16px", color: "#1A1A1A", fontSize: 14, lineHeight: 1.6, marginBottom: 16, transition: "border-color 0.2s" },
   uploadBtn: { width: "100%", padding: "12px 16px", background: "transparent", border: "1.5px dashed #D8D4CC", borderRadius: 10, color: "#999", fontSize: 13, fontWeight: 400, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" },
-  imagePreviewContainer: { position: "relative", marginBottom: 12, borderRadius: 10, overflow: "hidden", border: "1.5px solid #E8E4DC" },
-  imagePreview: { width: "100%", maxHeight: 200, objectFit: "cover", display: "block" },
-  removeImageBtn: { position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#888", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s" },
+  imageGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 8, marginBottom: 12 },
+  imageThumbnailContainer: { position: "relative", borderRadius: 8, overflow: "hidden", border: "1.5px solid #E8E4DC", aspectRatio: "1", backgroundColor: "#ECEAE4" },
+  imageThumbnail: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+  removeImageBtn: { position: "absolute", top: 4, right: 4, width: 20, height: 20, background: "rgba(255,255,255,0.85)", border: "none", borderRadius: 4, fontSize: 10, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", padding: 0 },
+  addMoreBtn: { border: "1.5px dashed #D8D4CC", borderRadius: 8, background: "transparent", color: "#999", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", aspectRatio: "1", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
   options: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 },
   opt: { width: "100%", padding: "14px 18px", background: "#ECEAE4", border: "1.5px solid transparent", borderRadius: 10, color: "#1A1A1A", fontSize: 14, fontWeight: 400, textAlign: "left", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s" },
   optMuted: { background: "transparent", border: "1.5px solid #E0DDD6", color: "#999" },
