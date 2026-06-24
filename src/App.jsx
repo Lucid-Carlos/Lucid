@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const SYSTEM_PROMPT = `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM.
+const SYSTEM_PROMPT = `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM or AI image/video tool.
+
+The user may provide an image as reference. If they do, analyze it and use it to generate a more specific and accurate prompt.
 
 STRICT FORMAT RULES:
 
@@ -18,6 +20,7 @@ RULES:
 - Maximum 3 questions total during the conversation
 - Options must be short (maximum 6 words)
 - The final prompt must be specific, with context and role if applicable
+- If an image was provided, describe its key visual elements in the prompt
 - Do NOT write anything outside this format
 - Do NOT use markdown, JSON, or explanations`;
 
@@ -68,10 +71,45 @@ export default function BlueDinosaurAI() {
   const [showHistory, setShowHistory] = useState(false);
   const [promptHistory, setPromptHistory] = useState([]);
   const [originalIdea, setOriginalIdea] = useState("");
+  const [imageBase64, setImageBase64] = useState(null);
+  const [imageMediaType, setImageMediaType] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     setPromptHistory(getHistory());
   }, []);
+
+  function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setError("Please upload a JPG, PNG, GIF or WebP image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image must be smaller than 5MB.");
+      return;
+    }
+    setError("");
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target.result;
+      const base64 = result.split(",")[1];
+      setImageBase64(base64);
+      setImageMediaType(file.type);
+      setImagePreview(result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    setImageBase64(null);
+    setImageMediaType(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function callClaude(messages) {
     const response = await fetch("/.netlify/functions/claude", {
@@ -102,11 +140,21 @@ export default function BlueDinosaurAI() {
   }
 
   async function handleSubmitInput() {
-    if (!userInput.trim()) return;
-    setOriginalIdea(userInput.trim());
+    if (!userInput.trim() && !imageBase64) return;
+    const idea = userInput.trim() || "Generate a prompt based on this image";
+    setOriginalIdea(idea);
     setLoading(true); setError("");
     try {
-      const msgs = [{ role: "user", content: userInput.trim() }];
+      let userContent;
+      if (imageBase64) {
+        userContent = [
+          { type: "image", source: { type: "base64", media_type: imageMediaType, data: imageBase64 } },
+          { type: "text", text: userInput.trim() || "Generate a prompt based on this image" },
+        ];
+      } else {
+        userContent = userInput.trim();
+      }
+      const msgs = [{ role: "user", content: userContent }];
       const result = await callClaude(msgs);
       await processResult(result, msgs);
     } catch(e) { setError(e.message); }
@@ -161,6 +209,7 @@ export default function BlueDinosaurAI() {
     setCurrentQuestion(null); setQuestionCount(0);
     setFinalPrompt(""); setError(""); setCopied(false);
     setCustomAnswer(""); setOriginalIdea("");
+    removeImage();
   }
 
   function clearHistory() {
@@ -169,6 +218,7 @@ export default function BlueDinosaurAI() {
   }
 
   const progress = stage === "input" ? 0 : stage === "final" ? 100 : questionCount * 30;
+  const canSubmit = userInput.trim() || imageBase64;
 
   return (
     <div style={s.root}>
@@ -193,6 +243,8 @@ export default function BlueDinosaurAI() {
         .hist-btn:hover { background: #ECEAE4 !important; }
         .hist-copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .clear-btn:hover { color: #C0392B !important; }
+        .upload-btn:hover { border-color: #1A1A1A !important; color: #1A1A1A !important; }
+        .remove-img:hover { color: #C0392B !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #D8D4CC; border-radius: 2px; }
@@ -219,17 +271,39 @@ export default function BlueDinosaurAI() {
 
       <div style={s.layout}>
 
-        {/* MAIN CONTENT */}
         <main style={{...s.main, marginRight: showHistory ? 340 : 0, transition: "margin-right 0.3s cubic-bezier(0.16,1,0.3,1)"}}>
 
           {stage === "input" && (
             <div className="fade-up" style={s.section}>
               <div style={s.eyebrow}>Turn vague ideas into precise prompts</div>
               <h1 style={s.heading}>Describe the result<br/>you want to achieve</h1>
-              <p style={s.body}>Bring your idea. We'll give you the perfect prompt in 60 seconds.</p>
+              <p style={s.body}>Bring your idea or upload an image. We'll give you the perfect prompt in 60 seconds.</p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                style={{ display: "none" }}
+                onChange={handleImageUpload}
+              />
+
+              {imagePreview ? (
+                <div style={s.imagePreviewContainer}>
+                  <img src={imagePreview} alt="Uploaded" style={s.imagePreview} />
+                  <button className="remove-img" style={s.removeImageBtn} onClick={removeImage}>
+                    ✕ Remove image
+                  </button>
+                </div>
+              ) : (
+                <button className="upload-btn" style={s.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+                  <span style={{ fontSize: 18, marginRight: 8 }}>📎</span>
+                  Upload an image (optional)
+                </button>
+              )}
+
               <textarea
-                style={s.textarea}
-                placeholder="Write your idea here, even if it's incomplete..."
+                style={{...s.textarea, marginTop: 12}}
+                placeholder={imageBase64 ? "Describe what you want to do with this image (optional)..." : "Write your idea here, even if it's incomplete..."}
                 value={userInput}
                 onChange={e => setUserInput(e.target.value)}
                 rows={4}
@@ -238,9 +312,9 @@ export default function BlueDinosaurAI() {
               {error && <p style={s.error}>{error}</p>}
               <button
                 className="primary"
-                style={{...s.primary, opacity: loading || !userInput.trim() ? 0.4 : 1}}
+                style={{...s.primary, opacity: loading || !canSubmit ? 0.4 : 1}}
                 onClick={handleSubmitInput}
-                disabled={loading || !userInput.trim()}
+                disabled={loading || !canSubmit}
               >
                 {loading ? <span style={s.spinner} /> : "Analyze →"}
               </button>
@@ -297,7 +371,7 @@ export default function BlueDinosaurAI() {
             <div className="fade-up" style={s.section}>
               <div style={s.eyebrow}>Your prompt is ready</div>
               <h2 style={{...s.heading, fontSize: 22}}>Ready to use</h2>
-              <p style={s.body}>Copy and paste it into Claude, ChatGPT or Gemini.</p>
+              <p style={s.body}>Copy and paste it into Claude, ChatGPT, Midjourney or any AI tool.</p>
               <div style={s.promptBox}>
                 <p style={s.promptText}>{finalPrompt}</p>
               </div>
@@ -314,7 +388,6 @@ export default function BlueDinosaurAI() {
 
         </main>
 
-        {/* HISTORY PANEL */}
         {showHistory && (
           <div className="slide-in" style={s.historyPanel}>
             <div style={s.historyHeader}>
@@ -376,6 +449,10 @@ const s = {
   heading: { fontSize: 28, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.2, color: "#1A1A1A", marginBottom: 14 },
   body: { fontSize: 14, color: "#777", lineHeight: 1.6, marginBottom: 24, fontWeight: 400 },
   textarea: { width: "100%", background: "#ECEAE4", border: "1.5px solid transparent", borderRadius: 10, padding: "14px 16px", color: "#1A1A1A", fontSize: 14, lineHeight: 1.6, marginBottom: 16, transition: "border-color 0.2s" },
+  uploadBtn: { width: "100%", padding: "12px 16px", background: "transparent", border: "1.5px dashed #D8D4CC", borderRadius: 10, color: "#999", fontSize: 13, fontWeight: 400, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" },
+  imagePreviewContainer: { position: "relative", marginBottom: 12, borderRadius: 10, overflow: "hidden", border: "1.5px solid #E8E4DC" },
+  imagePreview: { width: "100%", maxHeight: 200, objectFit: "cover", display: "block" },
+  removeImageBtn: { position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.9)", border: "none", borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#888", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s" },
   options: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 },
   opt: { width: "100%", padding: "14px 18px", background: "#ECEAE4", border: "1.5px solid transparent", borderRadius: 10, color: "#1A1A1A", fontSize: 14, fontWeight: 400, textAlign: "left", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s" },
   optMuted: { background: "transparent", border: "1.5px solid #E0DDD6", color: "#999" },
