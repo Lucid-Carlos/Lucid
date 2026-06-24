@@ -38,7 +38,7 @@ function parseResponse(raw) {
 }
 
 function saveToHistory(idea, prompt) {
-  const history = JSON.parse(localStorage.getItem("lucid_history") || "[]");
+  const history = JSON.parse(localStorage.getItem("bluedinosauurai_history") || "[]");
   const entry = {
     id: Date.now(),
     date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -46,14 +46,14 @@ function saveToHistory(idea, prompt) {
     prompt,
   };
   history.unshift(entry);
-  localStorage.setItem("lucid_history", JSON.stringify(history.slice(0, 50)));
+  localStorage.setItem("bluedinosauurai_history", JSON.stringify(history.slice(0, 50)));
 }
 
 function getHistory() {
-  return JSON.parse(localStorage.getItem("lucid_history") || "[]");
+  return JSON.parse(localStorage.getItem("bluedinosauurai_history") || "[]");
 }
 
-export default function Lucid() {
+export default function BlueDinosaurAI() {
   const [stage, setStage] = useState("input");
   const [userInput, setUserInput] = useState("");
   const [history, setHistory] = useState([]);
@@ -164,7 +164,7 @@ export default function Lucid() {
   }
 
   function clearHistory() {
-    localStorage.removeItem("lucid_history");
+    localStorage.removeItem("bluedinosauurai_history");
     setPromptHistory([]);
   }
 
@@ -199,7 +199,7 @@ export default function Lucid() {
       `}</style>
 
       <header style={s.header}>
-        <div style={s.wordmark}>Lucid</div>
+        <div style={s.wordmark}>Blue Dinosaur AI</div>
         <div style={s.headerRight}>
           <button
             style={{...s.historyBtn, background: showHistory ? "#1A1A1A" : "transparent", color: showHistory ? "#F5F3EF" : "#888", border: showHistory ? "1px solid #1A1A1A" : "1px solid #D8D4CC"}}
@@ -353,7 +353,7 @@ export default function Lucid() {
       </div>
 
       <footer style={s.footer}>
-        <span>Lucid · Made to think better before you ask</span>
+        <span>Blue Dinosaur AI · Made to think better before you ask</span>
       </footer>
     </div>
   );
