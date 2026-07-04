@@ -230,7 +230,8 @@ export default function Landing() {
           <div className="l-pro-badge">🦕 Próximamente</div>
           <h2 className="l-pro-title">Plan Pro está en camino.</h2>
           <p className="l-pro-sub">Prompts ilimitados, historial completo y más. Sé el primero en saber cuando esté disponible.</p>
-          <form className="l-waitlist-form" onSubmit={handleWaitlist}>
+          <form className="l-waitlist-form" onSubmit={handleWaitlist} data-netlify="true" name="waitlist">
+            <input type="hidden" name="form-name" value="waitlist" />
             <input type="email" id="wl-email" className="l-email-input" placeholder="tu@email.com" required />
             <button type="submit" className="l-submit-btn">Avisarme →</button>
           </form>
