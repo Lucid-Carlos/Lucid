@@ -1,6 +1,31 @@
 import { useState, useEffect, useRef } from "react";
 
-const SYSTEM_PROMPT = `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM or AI image/video tool.
+const PROMPTS = {
+  es: `Eres un experto en prompt engineering. Ayudas al usuario a clarificar lo que quiere preguntarle a un LLM o herramienta de IA (imágenes, video, etc.).
+
+El usuario puede proporcionar una o más imágenes como referencia. Si lo hace, analízalas y úsalas para generar un prompt más específico y preciso.
+
+REGLAS ESTRICTAS DE FORMATO:
+
+Si necesitas hacer una pregunta de clarificación, responde EXACTAMENTE así (nada más):
+QUESTION: [tu pregunta aquí]
+OPTION: [opción 1]
+OPTION: [opción 2]
+OPTION: [opción 3]
+OPTION: Otro / lo escribo yo
+
+Si ya tienes suficiente información para generar el prompt final, responde EXACTAMENTE así (nada más):
+PROMPT: [el prompt optimizado aquí]
+
+REGLAS:
+- Máximo 3 preguntas en total durante la conversación
+- Las opciones deben ser cortas (máximo 6 palabras)
+- El prompt final debe ser específico, con contexto y rol si aplica
+- Si se proporcionaron imágenes, describe sus elementos visuales clave en el prompt
+- NO escribas nada fuera de este formato
+- NO uses markdown, JSON ni explicaciones`,
+
+  en: `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM or AI image/video tool.
 
 The user may provide one or more images as reference. If they do, analyze them and use them to generate a more specific and accurate prompt.
 
@@ -22,7 +47,69 @@ RULES:
 - The final prompt must be specific, with context and role if applicable
 - If images were provided, describe their key visual elements in the prompt
 - Do NOT write anything outside this format
-- Do NOT use markdown, JSON, or explanations`;
+- Do NOT use markdown, JSON, or explanations`
+};
+
+const UI = {
+  es: {
+    eyebrow: "Prompts. Ricos, Precisos.",
+    heading: "Empieza con tu idea",
+    body: "Comparte tu idea o sube imágenes. Te damos el prompt perfecto en 60 segundos.",
+    placeholder: "Escribe tu idea aquí, aunque esté incompleta...",
+    placeholderImages: "Describe qué quieres hacer con estas imágenes (opcional)...",
+    uploadBtn: "Subir imágenes (opcional, hasta 5)",
+    analyzeBtn: "Analizar →",
+    questionLabel: "Pregunta",
+    yourAnswer: "Tu respuesta",
+    answerPlaceholder: "Escribe tu respuesta aquí...",
+    back: "← Atrás",
+    continueBtn: "Continuar →",
+    promptReady: "Tu prompt está listo",
+    readyToUse: "Listo para usar",
+    promptBody: "Cópialo y pégalo en Claude, ChatGPT, Midjourney o cualquier herramienta de IA.",
+    newBtn: "← Nuevo",
+    copyBtn: "Copiar prompt",
+    copiedBtn: "✓ Copiado",
+    historyBtn: "Historial",
+    clearAll: "Borrar todo",
+    historyEmpty: "Tus prompts generados aparecerán aquí.",
+    footer: "Blue Dinosaur AI · Hecho para pensar mejor antes de preguntar",
+    maxImages: "Máximo 5 imágenes permitidas.",
+    invalidType: "Solo se permiten imágenes JPG, PNG, GIF o WebP.",
+    maxSize: "Cada imagen debe ser menor a 5MB.",
+    networkError: "Error de red. Intenta de nuevo.",
+    customOption: ["otro", "escribo"],
+  },
+  en: {
+    eyebrow: "Prompts. Rich, Precise.",
+    heading: "Start with your idea",
+    body: "Drop your idea or upload images. We'll give you the perfect prompt in 60 seconds.",
+    placeholder: "Write your idea here, even if it's incomplete...",
+    placeholderImages: "Describe what you want to do with these images (optional)...",
+    uploadBtn: "Upload images (optional, up to 5)",
+    analyzeBtn: "Analyze →",
+    questionLabel: "Question",
+    yourAnswer: "Your answer",
+    answerPlaceholder: "Write your answer here...",
+    back: "← Back",
+    continueBtn: "Continue →",
+    promptReady: "Your prompt is ready",
+    readyToUse: "Ready to use",
+    promptBody: "Copy and paste it into Claude, ChatGPT, Midjourney or any AI tool.",
+    newBtn: "← New",
+    copyBtn: "Copy prompt",
+    copiedBtn: "✓ Copied",
+    historyBtn: "History",
+    clearAll: "Clear all",
+    historyEmpty: "Your generated prompts will appear here.",
+    footer: "Blue Dinosaur AI · Made to think better before you ask",
+    maxImages: "Maximum 5 images allowed.",
+    invalidType: "Only JPG, PNG, GIF or WebP images are allowed.",
+    maxSize: "Each image must be smaller than 5MB.",
+    networkError: "Network error. Please try again.",
+    customOption: ["other", "write"],
+  }
+};
 
 function parseResponse(raw) {
   const text = raw.trim();
@@ -44,7 +131,7 @@ function saveToHistory(idea, prompt) {
   const history = JSON.parse(localStorage.getItem("bluedinosauurai_history") || "[]");
   const entry = {
     id: Date.now(),
-    date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    date: new Date().toLocaleDateString("es-MX", { month: "short", day: "numeric", year: "numeric" }),
     idea: idea.slice(0, 80) + (idea.length > 80 ? "..." : ""),
     prompt,
   };
@@ -59,10 +146,11 @@ function getHistory() {
 const MAX_IMAGES = 5;
 
 export default function BlueDinosaurAI() {
+  const [lang, setLang] = useState("es");
   const [stage, setStage] = useState("input");
   const [userInput, setUserInput] = useState("");
   const [history, setHistory] = useState([]);
-  const [historyStack, setHistoryStack] = useState([]); // for back button
+  const [historyStack, setHistoryStack] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [questionCount, setQuestionCount] = useState(0);
   const [finalPrompt, setFinalPrompt] = useState("");
@@ -77,21 +165,27 @@ export default function BlueDinosaurAI() {
   const [images, setImages] = useState([]);
   const fileInputRef = useRef(null);
 
+  const t = UI[lang];
+
   useEffect(() => {
     setPromptHistory(getHistory());
   }, []);
+
+  function toggleLang() {
+    setLang(l => l === "es" ? "en" : "es");
+  }
 
   function handleImageUpload(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
     const validTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     const remaining = MAX_IMAGES - images.length;
-    if (remaining <= 0) { setError(`Maximum ${MAX_IMAGES} images allowed.`); return; }
+    if (remaining <= 0) { setError(t.maxImages); return; }
     const filesToProcess = files.slice(0, remaining);
     setError("");
     filesToProcess.forEach(file => {
-      if (!validTypes.includes(file.type)) { setError("Only JPG, PNG, GIF or WebP images are allowed."); return; }
-      if (file.size > 5 * 1024 * 1024) { setError("Each image must be smaller than 5MB."); return; }
+      if (!validTypes.includes(file.type)) { setError(t.invalidType); return; }
+      if (file.size > 5 * 1024 * 1024) { setError(t.maxSize); return; }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const result = ev.target.result;
@@ -114,11 +208,11 @@ export default function BlueDinosaurAI() {
     const response = await fetch("/.netlify/functions/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system: SYSTEM_PROMPT, messages }),
+      body: JSON.stringify({ system: PROMPTS[lang], messages }),
     });
     const text = await response.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { throw new Error("Network error. Please try again."); }
+    try { data = JSON.parse(text); } catch(e) { throw new Error(t.networkError); }
     if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
     const raw = data.content.map(b => b.text || "").join("");
     return parseResponse(raw);
@@ -127,13 +221,7 @@ export default function BlueDinosaurAI() {
   async function processResult(result, newHistory) {
     setHistory(newHistory);
     if (result.type === "question" && questionCount < 3) {
-      // Save current state to stack for back navigation
-      setHistoryStack(prev => [...prev, {
-        history: newHistory,
-        question: currentQuestion,
-        questionCount,
-        stage,
-      }]);
+      setHistoryStack(prev => [...prev, { history: newHistory, question: currentQuestion, questionCount, stage }]);
       setCurrentQuestion(result);
       setQuestionCount(q => q + 1);
       setStage("questioning");
@@ -147,24 +235,12 @@ export default function BlueDinosaurAI() {
 
   function handleBack() {
     if (historyStack.length === 0) {
-      // No more questions to go back to — return to input
-      setStage("input");
-      setHistory([]);
-      setCurrentQuestion(null);
-      setQuestionCount(0);
-      setError("");
-      return;
+      setStage("input"); setHistory([]); setCurrentQuestion(null); setQuestionCount(0); setError(""); return;
     }
     const prev = historyStack[historyStack.length - 1];
     setHistoryStack(stack => stack.slice(0, -1));
-    // If this was the first question, go back to input
     if (prev.questionCount === 0) {
-      setStage("input");
-      setHistory([]);
-      setCurrentQuestion(null);
-      setQuestionCount(0);
-      setError("");
-      return;
+      setStage("input"); setHistory([]); setCurrentQuestion(null); setQuestionCount(0); setError(""); return;
     }
     setHistory(prev.history.slice(0, -2));
     setCurrentQuestion(prev.question);
@@ -183,10 +259,7 @@ export default function BlueDinosaurAI() {
       let userContent;
       if (images.length > 0) {
         userContent = [
-          ...images.map(img => ({
-            type: "image",
-            source: { type: "base64", media_type: img.mediaType, data: img.base64 }
-          })),
+          ...images.map(img => ({ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.base64 } })),
           { type: "text", text: userInput.trim() || "Generate a prompt based on these images" },
         ];
       } else {
@@ -257,7 +330,6 @@ export default function BlueDinosaurAI() {
 
   const progress = stage === "input" ? 0 : stage === "final" ? 100 : questionCount * 30;
   const canSubmit = userInput.trim() || images.length > 0;
-  const canGoBack = stage === "questioning" || stage === "custom";
 
   return (
     <div style={s.root}>
@@ -279,6 +351,7 @@ export default function BlueDinosaurAI() {
         .ghost:hover { border-color: #1A1A1A !important; color: #1A1A1A !important; }
         .copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .back:hover { color: #1A1A1A !important; }
+        .lang-btn:hover { background: #ECEAE4 !important; color: #1A1A1A !important; }
         .progress-bar { transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
         .hist-btn:hover { background: #ECEAE4 !important; }
         .hist-copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
@@ -293,13 +366,16 @@ export default function BlueDinosaurAI() {
       <header style={s.header}>
         <div style={s.wordmark}>Blue Dinosaur AI</div>
         <div style={s.headerRight}>
+          <button className="lang-btn" style={s.langBtn} onClick={toggleLang}>
+            {lang === "es" ? "EN" : "ES"}
+          </button>
           <button
             style={{...s.historyBtn, background: showHistory ? "#1A1A1A" : "transparent", color: showHistory ? "#F5F3EF" : "#888", border: showHistory ? "1px solid #1A1A1A" : "1px solid #D8D4CC"}}
             className="hist-btn"
             onClick={() => setShowHistory(!showHistory)}
           >
             {promptHistory.length > 0 && <span style={s.badge}>{promptHistory.length}</span>}
-            History
+            {t.historyBtn}
           </button>
           <span style={s.pill}>Beta</span>
         </div>
@@ -314,9 +390,9 @@ export default function BlueDinosaurAI() {
 
           {stage === "input" && (
             <div className="fade-up" style={s.section}>
-              <div style={s.eyebrow}>Prompts. Rich, Precise.</div>
-              <h1 style={s.heading}>Start with your idea</h1>
-              <p style={s.body}>Drop your idea or upload images. We'll give you the perfect prompt in 60 seconds.</p>
+              <div style={s.eyebrow}>{t.eyebrow}</div>
+              <h1 style={s.heading}>{t.heading}</h1>
+              <p style={s.body}>{t.body}</p>
 
               <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple style={{ display: "none" }} onChange={handleImageUpload} />
 
@@ -325,11 +401,11 @@ export default function BlueDinosaurAI() {
                   {images.map((img, i) => (
                     <div key={i} style={s.imageThumbnailContainer}>
                       <img src={img.preview} alt={`Upload ${i + 1}`} style={s.imageThumbnail} />
-                      <button className="remove-img" style={s.removeImageBtn} onClick={() => removeImage(i)} title="Remove image">✕</button>
+                      <button className="remove-img" style={s.removeImageBtn} onClick={() => removeImage(i)}>✕</button>
                     </div>
                   ))}
                   {images.length < MAX_IMAGES && (
-                    <button className="upload-btn" style={s.addMoreBtn} onClick={() => fileInputRef.current?.click()} title={`Add more images (${images.length}/${MAX_IMAGES})`}>
+                    <button className="upload-btn" style={s.addMoreBtn} onClick={() => fileInputRef.current?.click()}>
                       <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
                       <span style={{ fontSize: 10, marginTop: 4 }}>{images.length}/{MAX_IMAGES}</span>
                     </button>
@@ -340,13 +416,13 @@ export default function BlueDinosaurAI() {
               {images.length === 0 && (
                 <button className="upload-btn" style={s.uploadBtn} onClick={() => fileInputRef.current?.click()}>
                   <span style={{ fontSize: 18, marginRight: 8 }}>📎</span>
-                  Upload images (optional, up to 5)
+                  {t.uploadBtn}
                 </button>
               )}
 
               <textarea
                 style={{...s.textarea, marginTop: 12}}
-                placeholder={images.length > 0 ? "Describe what you want to do with these images (optional)..." : "Write your idea here, even if it's incomplete..."}
+                placeholder={images.length > 0 ? t.placeholderImages : t.placeholder}
                 value={userInput}
                 onChange={e => setUserInput(e.target.value)}
                 rows={4}
@@ -354,7 +430,7 @@ export default function BlueDinosaurAI() {
               />
               {error && <p style={s.error}>{error}</p>}
               <button className="primary" style={{...s.primary, opacity: loading || !canSubmit ? 0.4 : 1}} onClick={handleSubmitInput} disabled={loading || !canSubmit}>
-                {loading ? <span style={s.spinner} /> : "Analyze →"}
+                {loading ? <span style={s.spinner} /> : t.analyzeBtn}
               </button>
             </div>
           )}
@@ -362,13 +438,13 @@ export default function BlueDinosaurAI() {
           {stage === "questioning" && currentQuestion && (
             <div className="fade-up" style={s.section}>
               <div style={s.questionNav}>
-                <button className="back" style={s.backBtn} onClick={handleBack}>← Back</button>
-                <div style={s.eyebrow}>Question {questionCount}</div>
+                <button className="back" style={s.backBtn} onClick={handleBack}>{t.back}</button>
+                <div style={s.eyebrow}>{t.questionLabel} {questionCount}</div>
               </div>
               <h2 style={s.heading}>{currentQuestion.question}</h2>
               <div style={s.options}>
                 {currentQuestion.options?.map((opt, i) => {
-                  const isCustom = opt.toLowerCase().includes("other") || opt.toLowerCase().includes("write");
+                  const isCustom = t.customOption.some(kw => opt.toLowerCase().includes(kw));
                   return (
                     <button key={i} className="opt"
                       style={{...s.opt, ...(isCustom ? s.optMuted : {})}}
@@ -386,11 +462,11 @@ export default function BlueDinosaurAI() {
 
           {stage === "custom" && (
             <div className="fade-up" style={s.section}>
-              <div style={s.eyebrow}>Your answer</div>
+              <div style={s.eyebrow}>{t.yourAnswer}</div>
               <h2 style={s.heading}>{currentQuestion?.question}</h2>
               <textarea
                 style={s.textarea}
-                placeholder="Write your answer here..."
+                placeholder={t.answerPlaceholder}
                 value={customAnswer}
                 onChange={e => setCustomAnswer(e.target.value)}
                 rows={3}
@@ -398,11 +474,11 @@ export default function BlueDinosaurAI() {
               />
               {error && <p style={s.error}>{error}</p>}
               <div style={s.row}>
-                <button className="ghost" style={s.ghost} onClick={handleBack}>← Back</button>
+                <button className="ghost" style={s.ghost} onClick={handleBack}>{t.back}</button>
                 <button className="primary"
                   style={{...s.primary, flex: 1, opacity: loading || !customAnswer.trim() ? 0.4 : 1}}
                   onClick={handleCustomAnswer} disabled={loading || !customAnswer.trim()}>
-                  {loading ? <span style={s.spinner} /> : "Continue →"}
+                  {loading ? <span style={s.spinner} /> : t.continueBtn}
                 </button>
               </div>
             </div>
@@ -410,18 +486,18 @@ export default function BlueDinosaurAI() {
 
           {stage === "final" && (
             <div className="fade-up" style={s.section}>
-              <div style={s.eyebrow}>Your prompt is ready</div>
-              <h2 style={{...s.heading, fontSize: 22}}>Ready to use</h2>
-              <p style={s.body}>Copy and paste it into Claude, ChatGPT, Midjourney or any AI tool.</p>
+              <div style={s.eyebrow}>{t.promptReady}</div>
+              <h2 style={{...s.heading, fontSize: 22}}>{t.readyToUse}</h2>
+              <p style={s.body}>{t.promptBody}</p>
               <div style={s.promptBox}>
                 <p style={s.promptText}>{finalPrompt}</p>
               </div>
               <div style={s.row}>
-                <button className="ghost" style={s.ghost} onClick={handleReset}>← New</button>
+                <button className="ghost" style={s.ghost} onClick={handleReset}>{t.newBtn}</button>
                 <button className="copy"
                   style={{...s.primary, flex: 1, background: copied ? "#1A1A1A" : "#F5F3EF", color: copied ? "#F5F3EF" : "#1A1A1A", border: "1.5px solid #1A1A1A"}}
                   onClick={() => handleCopy(finalPrompt)}>
-                  {copied ? "✓ Copied" : "Copy prompt"}
+                  {copied ? t.copiedBtn : t.copyBtn}
                 </button>
               </div>
             </div>
@@ -432,15 +508,15 @@ export default function BlueDinosaurAI() {
         {showHistory && (
           <div className="slide-in" style={s.historyPanel}>
             <div style={s.historyHeader}>
-              <span style={s.historyTitle}>History</span>
+              <span style={s.historyTitle}>{t.historyBtn}</span>
               {promptHistory.length > 0 && (
-                <button className="clear-btn" style={s.clearBtn} onClick={clearHistory}>Clear all</button>
+                <button className="clear-btn" style={s.clearBtn} onClick={clearHistory}>{t.clearAll}</button>
               )}
             </div>
             <div style={s.historyList}>
               {promptHistory.length === 0 ? (
                 <div style={s.historyEmpty}>
-                  <p style={{fontSize: 13, color: "#999", textAlign: "center", lineHeight: 1.6}}>Your generated prompts will appear here.</p>
+                  <p style={{fontSize: 13, color: "#999", textAlign: "center", lineHeight: 1.6}}>{t.historyEmpty}</p>
                 </div>
               ) : (
                 promptHistory.map(entry => (
@@ -451,7 +527,7 @@ export default function BlueDinosaurAI() {
                     <button className="hist-copy"
                       style={{...s.histCopyBtn, background: copiedId === entry.id ? "#1A1A1A" : "transparent", color: copiedId === entry.id ? "#F5F3EF" : "#888"}}
                       onClick={() => handleCopy(entry.prompt, entry.id)}>
-                      {copiedId === entry.id ? "✓ Copied" : "Copy"}
+                      {copiedId === entry.id ? t.copiedBtn : "Copy"}
                     </button>
                   </div>
                 ))
@@ -463,7 +539,7 @@ export default function BlueDinosaurAI() {
       </div>
 
       <footer style={s.footer}>
-        <span>Blue Dinosaur AI · Made to think better before you ask</span>
+        <span>{t.footer}</span>
       </footer>
     </div>
   );
@@ -474,6 +550,7 @@ const s = {
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid #E8E4DC", position: "sticky", top: 0, background: "#F5F3EF", zIndex: 10 },
   wordmark: { fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: "#1A1A1A" },
   headerRight: { display: "flex", alignItems: "center", gap: 10 },
+  langBtn: { fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", background: "transparent", border: "1px solid #D8D4CC", color: "#888", letterSpacing: "0.05em" },
   historyBtn: { fontSize: 12, fontWeight: 500, padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6, position: "relative" },
   badge: { background: "#1A1A1A", color: "#F5F3EF", fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 10, lineHeight: 1.4 },
   pill: { fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", color: "#888", background: "#ECEAE4", padding: "3px 10px", borderRadius: 99, textTransform: "uppercase" },
