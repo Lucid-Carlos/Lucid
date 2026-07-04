@@ -145,6 +145,19 @@ function getHistory() {
 
 const MAX_IMAGES = 5;
 
+// Brand colors matching landing page
+const C = {
+  bg: "#F5F3EF",
+  bgCard: "#EDF2F7",
+  border: "#C9D8E8",
+  text: "#1A1A1A",
+  textMuted: "#6B7E96",
+  textLight: "#5A6E84",
+  accent: "#1B4F72",
+  accentLight: "#7EB8D4",
+  accentSoft: "#D6EAF8",
+};
+
 export default function BlueDinosaurAI() {
   const [lang, setLang] = useState("es");
   const [stage, setStage] = useState("input");
@@ -167,13 +180,9 @@ export default function BlueDinosaurAI() {
 
   const t = UI[lang];
 
-  useEffect(() => {
-    setPromptHistory(getHistory());
-  }, []);
+  useEffect(() => { setPromptHistory(getHistory()); }, []);
 
-  function toggleLang() {
-    setLang(l => l === "es" ? "en" : "es");
-  }
+  function toggleLang() { setLang(l => l === "es" ? "en" : "es"); }
 
   function handleImageUpload(e) {
     const files = Array.from(e.target.files);
@@ -190,19 +199,14 @@ export default function BlueDinosaurAI() {
       reader.onload = (ev) => {
         const result = ev.target.result;
         const base64 = result.split(",")[1];
-        setImages(prev => {
-          if (prev.length >= MAX_IMAGES) return prev;
-          return [...prev, { base64, mediaType: file.type, preview: result }];
-        });
+        setImages(prev => prev.length >= MAX_IMAGES ? prev : [...prev, { base64, mediaType: file.type, preview: result }]);
       };
       reader.readAsDataURL(file);
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function removeImage(index) {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  }
+  function removeImage(index) { setImages(prev => prev.filter((_, i) => i !== index)); }
 
   async function callClaude(messages) {
     const response = await fetch("/.netlify/functions/claude", {
@@ -344,35 +348,39 @@ export default function BlueDinosaurAI() {
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
         .slide-in { animation: slideIn 0.3s cubic-bezier(0.16,1,0.3,1) forwards; }
-        .opt:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
+        .opt:hover { background: #1B4F72 !important; color: #fff !important; border-color: #1B4F72 !important; }
         .opt:active { transform: scale(0.99); }
-        .primary:hover { background: #2A2A2A !important; }
+        .primary:hover { background: #154060 !important; }
         .primary:active { transform: scale(0.99); }
-        .ghost:hover { border-color: #1A1A1A !important; color: #1A1A1A !important; }
-        .copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
-        .back:hover { color: #1A1A1A !important; }
-        .lang-btn:hover { background: #ECEAE4 !important; color: #1A1A1A !important; }
+        .ghost:hover { border-color: #1B4F72 !important; color: #1B4F72 !important; }
+        .copy-btn:hover { background: #1B4F72 !important; color: #fff !important; border-color: #1B4F72 !important; }
+        .back:hover { color: #1B4F72 !important; }
+        .lang-btn:hover { background: #D6EAF8 !important; color: #1B4F72 !important; border-color: #C9D8E8 !important; }
         .wordmark:hover { opacity: 0.7; }
         .progress-bar { transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
-        .hist-btn:hover { background: #ECEAE4 !important; }
-        .hist-copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
+        .hist-btn-active { background: #1B4F72 !important; color: #fff !important; border-color: #1B4F72 !important; }
+        .hist-btn:hover { background: #D6EAF8 !important; color: #1B4F72 !important; }
+        .hist-copy:hover { background: #1B4F72 !important; color: #fff !important; }
         .clear-btn:hover { color: #C0392B !important; }
-        .upload-btn:hover { border-color: #1A1A1A !important; color: #1A1A1A !important; }
+        .upload-btn:hover { border-color: #1B4F72 !important; color: #1B4F72 !important; }
         .remove-img:hover { background: rgba(192,57,43,0.15) !important; color: #C0392B !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #D8D4CC; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: #C9D8E8; border-radius: 2px; }
       `}</style>
 
       <header style={s.header}>
-        <div className="wordmark" style={s.wordmark} onClick={handleReset}>Blue Dinosaur AI</div>
+        <div style={s.logoArea} className="wordmark" onClick={handleReset}>
+          <img src="/dino.png" alt="" style={s.dinoIcon} onError={e => e.target.style.display='none'} />
+          <span style={s.wordmark}>Blue Dinosaur AI</span>
+        </div>
         <div style={s.headerRight}>
           <button className="lang-btn" style={s.langBtn} onClick={toggleLang}>
             {lang === "es" ? "EN" : "ES"}
           </button>
           <button
-            style={{...s.historyBtn, background: showHistory ? "#1A1A1A" : "transparent", color: showHistory ? "#F5F3EF" : "#888", border: showHistory ? "1px solid #1A1A1A" : "1px solid #D8D4CC"}}
-            className="hist-btn"
+            style={{...s.historyBtn, ...(showHistory ? {background: C.accent, color: "#fff", borderColor: C.accent} : {})}}
+            className={`hist-btn${showHistory ? " hist-btn-active" : ""}`}
             onClick={() => setShowHistory(!showHistory)}
           >
             {promptHistory.length > 0 && <span style={s.badge}>{promptHistory.length}</span>}
@@ -456,7 +464,7 @@ export default function BlueDinosaurAI() {
                   );
                 })}
               </div>
-              {loading && <div style={s.loadingRow}><span style={{...s.spinner, borderTopColor: "#1A1A1A", borderColor: "rgba(0,0,0,0.1)"}} /></div>}
+              {loading && <div style={s.loadingRow}><span style={{...s.spinner, borderTopColor: C.accent, borderColor: "rgba(27,79,114,0.15)"}} /></div>}
               {error && <p style={s.error}>{error}</p>}
             </div>
           )}
@@ -495,8 +503,8 @@ export default function BlueDinosaurAI() {
               </div>
               <div style={s.row}>
                 <button className="ghost" style={s.ghost} onClick={handleReset}>{t.newBtn}</button>
-                <button className="copy"
-                  style={{...s.primary, flex: 1, background: copied ? "#1A1A1A" : "#F5F3EF", color: copied ? "#F5F3EF" : "#1A1A1A", border: "1.5px solid #1A1A1A"}}
+                <button className="copy-btn"
+                  style={{...s.primary, flex: 1, background: copied ? C.accent : C.accentSoft, color: copied ? "#fff" : C.accent, border: `1.5px solid ${C.accent}`}}
                   onClick={() => handleCopy(finalPrompt)}>
                   {copied ? t.copiedBtn : t.copyBtn}
                 </button>
@@ -517,7 +525,7 @@ export default function BlueDinosaurAI() {
             <div style={s.historyList}>
               {promptHistory.length === 0 ? (
                 <div style={s.historyEmpty}>
-                  <p style={{fontSize: 13, color: "#999", textAlign: "center", lineHeight: 1.6}}>{t.historyEmpty}</p>
+                  <p style={{fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6}}>{t.historyEmpty}</p>
                 </div>
               ) : (
                 promptHistory.map(entry => (
@@ -526,7 +534,7 @@ export default function BlueDinosaurAI() {
                     <div style={s.historyIdea}>"{entry.idea}"</div>
                     <div style={s.historyPrompt}>{entry.prompt}</div>
                     <button className="hist-copy"
-                      style={{...s.histCopyBtn, background: copiedId === entry.id ? "#1A1A1A" : "transparent", color: copiedId === entry.id ? "#F5F3EF" : "#888"}}
+                      style={{...s.histCopyBtn, background: copiedId === entry.id ? C.accent : "transparent", color: copiedId === entry.id ? "#fff" : C.textMuted}}
                       onClick={() => handleCopy(entry.prompt, entry.id)}>
                       {copiedId === entry.id ? t.copiedBtn : "Copy"}
                     </button>
@@ -546,53 +554,61 @@ export default function BlueDinosaurAI() {
   );
 }
 
+const C = {
+  bg: "#F5F3EF", bgCard: "#EDF2F7", border: "#C9D8E8",
+  text: "#1A1A1A", textMuted: "#6B7E96", textLight: "#5A6E84",
+  accent: "#1B4F72", accentLight: "#7EB8D4", accentSoft: "#D6EAF8",
+};
+
 const s = {
-  root: { minHeight: "100vh", background: "#F5F3EF", display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", color: "#1A1A1A" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid #E8E4DC", position: "sticky", top: 0, background: "#F5F3EF", zIndex: 10 },
-  wordmark: { fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: "#1A1A1A", cursor: "pointer", transition: "opacity 0.15s" },
+  root: { minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", color: C.text },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 28px", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, background: "rgba(245,243,239,0.94)", backdropFilter: "blur(12px)", zIndex: 10 },
+  logoArea: { display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "opacity 0.15s" },
+  dinoIcon: { width: 28, height: 28, objectFit: "contain" },
+  wordmark: { fontSize: 16, fontWeight: 600, letterSpacing: "-0.3px", color: C.text },
   headerRight: { display: "flex", alignItems: "center", gap: 10 },
-  langBtn: { fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", background: "transparent", border: "1px solid #D8D4CC", color: "#888", letterSpacing: "0.05em" },
-  historyBtn: { fontSize: 12, fontWeight: 500, padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6, position: "relative" },
-  badge: { background: "#1A1A1A", color: "#F5F3EF", fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 10, lineHeight: 1.4 },
-  pill: { fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", color: "#888", background: "#ECEAE4", padding: "3px 10px", borderRadius: 99, textTransform: "uppercase" },
-  progressTrack: { height: 2, background: "#E8E4DC", width: "100%" },
-  progressFill: { height: "100%", background: "#1A1A1A", borderRadius: 99 },
+  langBtn: { fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", background: "transparent", border: `1px solid ${C.border}`, color: C.textMuted, letterSpacing: "0.05em" },
+  historyBtn: { fontSize: 12, fontWeight: 500, padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid ${C.border}`, color: C.textMuted },
+  badge: { background: C.accent, color: "#fff", fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 10, lineHeight: 1.4 },
+  pill: { fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", color: C.accent, background: C.accentSoft, padding: "3px 10px", borderRadius: 99, textTransform: "uppercase", border: `1px solid rgba(27,79,114,0.2)` },
+  progressTrack: { height: 2, background: C.border, width: "100%" },
+  progressFill: { height: "100%", background: C.accent, borderRadius: 99 },
   layout: { flex: 1, display: "flex", position: "relative" },
   main: { flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "60px 24px 40px", transition: "margin-right 0.3s" },
   section: { width: "100%", maxWidth: 480 },
   questionNav: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  eyebrow: { fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", color: "#999", textTransform: "uppercase" },
-  backBtn: { fontSize: 12, color: "#BBB", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s", padding: 0, fontWeight: 500 },
-  heading: { fontSize: 28, fontWeight: 600, letterSpacing: "-0.03em", lineHeight: 1.2, color: "#1A1A1A", marginBottom: 14 },
-  body: { fontSize: 14, color: "#777", lineHeight: 1.6, marginBottom: 24, fontWeight: 400 },
-  textarea: { width: "100%", background: "#ECEAE4", border: "1.5px solid transparent", borderRadius: 10, padding: "14px 16px", color: "#1A1A1A", fontSize: 14, lineHeight: 1.6, marginBottom: 16, transition: "border-color 0.2s" },
-  uploadBtn: { width: "100%", padding: "12px 16px", background: "transparent", border: "1.5px dashed #D8D4CC", borderRadius: 10, color: "#999", fontSize: 13, fontWeight: 400, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" },
+  eyebrow: { fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", color: C.accent, textTransform: "uppercase", marginBottom: 14, fontFamily: "'DM Mono', monospace" },
+  backBtn: { fontSize: 12, color: C.textMuted, background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s", padding: 0, fontWeight: 500 },
+  heading: { fontSize: 28, fontWeight: 700, letterSpacing: "-1px", lineHeight: 1.2, color: C.text, marginBottom: 14 },
+  body: { fontSize: 14, color: C.textLight, lineHeight: 1.6, marginBottom: 24, fontWeight: 300 },
+  textarea: { width: "100%", background: C.bgCard, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", color: C.text, fontSize: 14, lineHeight: 1.6, marginBottom: 16, transition: "border-color 0.2s" },
+  uploadBtn: { width: "100%", padding: "12px 16px", background: "transparent", border: `1.5px dashed ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 13, fontWeight: 400, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center" },
   imageGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))", gap: 8, marginBottom: 12 },
-  imageThumbnailContainer: { position: "relative", borderRadius: 8, overflow: "hidden", border: "1.5px solid #E8E4DC", aspectRatio: "1", backgroundColor: "#ECEAE4" },
+  imageThumbnailContainer: { position: "relative", borderRadius: 8, overflow: "hidden", border: `1.5px solid ${C.border}`, aspectRatio: "1", backgroundColor: C.bgCard },
   imageThumbnail: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
   removeImageBtn: { position: "absolute", top: 4, right: 4, width: 20, height: 20, background: "rgba(255,255,255,0.85)", border: "none", borderRadius: 4, fontSize: 10, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", padding: 0 },
-  addMoreBtn: { border: "1.5px dashed #D8D4CC", borderRadius: 8, background: "transparent", color: "#999", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", aspectRatio: "1", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
+  addMoreBtn: { border: `1.5px dashed ${C.border}`, borderRadius: 8, background: "transparent", color: C.textMuted, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", aspectRatio: "1", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
   options: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 },
-  opt: { width: "100%", padding: "14px 18px", background: "#ECEAE4", border: "1.5px solid transparent", borderRadius: 10, color: "#1A1A1A", fontSize: 14, fontWeight: 400, textAlign: "left", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s" },
-  optMuted: { background: "transparent", border: "1.5px solid #E0DDD6", color: "#999" },
-  primary: { display: "block", width: "100%", padding: "13px 20px", background: "#1A1A1A", border: "none", borderRadius: 10, color: "#F5F3EF", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center" },
-  ghost: { padding: "13px 18px", background: "transparent", border: "1.5px solid #D8D4CC", borderRadius: 10, color: "#888", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" },
+  opt: { width: "100%", padding: "14px 18px", background: C.bgCard, border: `1.5px solid ${C.border}`, borderRadius: 10, color: C.text, fontSize: 14, fontWeight: 400, textAlign: "left", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s" },
+  optMuted: { background: "transparent", border: `1.5px dashed ${C.border}`, color: C.textMuted },
+  primary: { display: "block", width: "100%", padding: "13px 20px", background: C.accent, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", boxShadow: "0 4px 12px rgba(27,79,114,0.2)" },
+  ghost: { padding: "13px 18px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" },
   row: { display: "flex", gap: 8, alignItems: "center" },
-  promptBox: { background: "#ECEAE4", borderRadius: 10, padding: "18px 20px", marginBottom: 20, maxHeight: 240, overflowY: "auto" },
-  promptText: { fontSize: 13, color: "#333", lineHeight: 1.75, fontFamily: "'DM Mono', monospace", whiteSpace: "pre-wrap" },
+  promptBox: { background: C.accentSoft, border: `1px solid rgba(27,79,114,0.2)`, borderRadius: 10, padding: "18px 20px", marginBottom: 20, maxHeight: 240, overflowY: "auto" },
+  promptText: { fontSize: 13, color: C.accent, lineHeight: 1.75, fontFamily: "'DM Mono', monospace", whiteSpace: "pre-wrap" },
   error: { fontSize: 12, color: "#C0392B", marginBottom: 12, fontFamily: "'DM Mono', monospace" },
   loadingRow: { display: "flex", justifyContent: "center", paddingTop: 16 },
-  spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(0,0,0,0.1)", borderTop: "2px solid #1A1A1A", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
-  footer: { padding: "20px 28px", borderTop: "1px solid #E8E4DC", fontSize: 11, color: "#BBB", textAlign: "center", letterSpacing: "0.02em" },
-  historyPanel: { position: "fixed", top: 57, right: 0, width: 320, height: "calc(100vh - 57px)", background: "#FAFAF7", borderLeft: "1px solid #E8E4DC", display: "flex", flexDirection: "column", zIndex: 9 },
-  historyHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #E8E4DC" },
-  historyTitle: { fontSize: 13, fontWeight: 600, color: "#1A1A1A", letterSpacing: "-0.2px" },
-  clearBtn: { fontSize: 11, color: "#BBB", background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s" },
+  spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
+  footer: { padding: "20px 28px", borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textMuted, textAlign: "center", letterSpacing: "0.02em", fontFamily: "'DM Mono', monospace" },
+  historyPanel: { position: "fixed", top: 57, right: 0, width: 320, height: "calc(100vh - 57px)", background: "#FAFCFF", borderLeft: `1px solid ${C.border}`, display: "flex", flexDirection: "column", zIndex: 9 },
+  historyHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${C.border}` },
+  historyTitle: { fontSize: 13, fontWeight: 600, color: C.text, letterSpacing: "-0.2px" },
+  clearBtn: { fontSize: 11, color: C.textMuted, background: "none", border: "none", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "color 0.15s" },
   historyList: { flex: 1, overflowY: "auto", padding: "12px" },
   historyEmpty: { display: "flex", alignItems: "center", justifyContent: "center", height: "100%", padding: "20px" },
-  historyCard: { background: "#fff", border: "1px solid #E8E4DC", borderRadius: 10, padding: "14px", marginBottom: 10 },
-  historyDate: { fontSize: 10, color: "#BBB", fontFamily: "'DM Mono', monospace", marginBottom: 6, letterSpacing: "0.3px" },
-  historyIdea: { fontSize: 12, color: "#888", lineHeight: 1.5, marginBottom: 8, fontStyle: "italic" },
-  historyPrompt: { fontSize: 12, color: "#444", lineHeight: 1.6, fontFamily: "'DM Mono', monospace", marginBottom: 10, maxHeight: 80, overflowY: "auto", whiteSpace: "pre-wrap" },
-  histCopyBtn: { fontSize: 11, fontWeight: 500, padding: "4px 10px", border: "1px solid #E8E4DC", borderRadius: 6, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
+  historyCard: { background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px", marginBottom: 10 },
+  historyDate: { fontSize: 10, color: C.textMuted, fontFamily: "'DM Mono', monospace", marginBottom: 6, letterSpacing: "0.3px" },
+  historyIdea: { fontSize: 12, color: C.textLight, lineHeight: 1.5, marginBottom: 8, fontStyle: "italic" },
+  historyPrompt: { fontSize: 12, color: C.textLight, lineHeight: 1.6, fontFamily: "'DM Mono', monospace", marginBottom: 10, maxHeight: 80, overflowY: "auto", whiteSpace: "pre-wrap" },
+  histCopyBtn: { fontSize: 11, fontWeight: 500, padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
 };
