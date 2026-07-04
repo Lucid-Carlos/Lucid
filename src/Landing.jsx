@@ -105,13 +105,22 @@ export default function Landing() {
   function handleWaitlist(e) {
     e.preventDefault();
     const email = document.getElementById("wl-email").value;
-    const list = JSON.parse(localStorage.getItem("bd_waitlist") || "[]");
-    if (!list.includes(email)) list.push(email);
-    localStorage.setItem("bd_waitlist", JSON.stringify(list));
-    document.getElementById("wl-msg").style.display = "block";
-    document.getElementById("wl-email").value = "";
-    document.getElementById("wl-email").disabled = true;
-    document.querySelector(".l-submit-btn").disabled = true;
+    
+    fetch("/", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ "form-name": "waitlist", email }).toString(),
+    })
+      .then(() => {
+        document.getElementById("wl-msg").style.display = "block";
+        document.getElementById("wl-email").value = "";
+        document.getElementById("wl-email").disabled = true;
+        document.querySelector(".l-submit-btn").disabled = true;
+      })
+      .catch(() => {
+        document.getElementById("wl-msg").style.display = "block";
+        document.getElementById("wl-msg").textContent = "Error al enviar. Intenta de nuevo.";
+      });
   }
 
   return (
