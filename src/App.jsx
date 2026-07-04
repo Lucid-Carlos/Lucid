@@ -554,12 +554,6 @@ export default function BlueDinosaurAI() {
   );
 }
 
-const C = {
-  bg: "#F5F3EF", bgCard: "#EDF2F7", border: "#C9D8E8",
-  text: "#1A1A1A", textMuted: "#6B7E96", textLight: "#5A6E84",
-  accent: "#1B4F72", accentLight: "#7EB8D4", accentSoft: "#D6EAF8",
-};
-
 const s = {
   root: { minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", color: C.text },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 28px", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, background: "rgba(245,243,239,0.94)", backdropFilter: "blur(12px)", zIndex: 10 },
