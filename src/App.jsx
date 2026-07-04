@@ -52,7 +52,7 @@ RULES:
 
 const UI = {
   es: {
-    eyebrow: "Prompts. Ricos, Precisos.",
+    eyebrow: "Prompts. Completos, Precisos.",
     heading: "Empieza con tu idea",
     body: "Comparte tu idea o sube imágenes. Te damos el prompt perfecto en 60 segundos.",
     placeholder: "Escribe tu idea aquí, aunque esté incompleta...",
@@ -352,6 +352,7 @@ export default function BlueDinosaurAI() {
         .copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
         .back:hover { color: #1A1A1A !important; }
         .lang-btn:hover { background: #ECEAE4 !important; color: #1A1A1A !important; }
+        .wordmark:hover { opacity: 0.7; }
         .progress-bar { transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
         .hist-btn:hover { background: #ECEAE4 !important; }
         .hist-copy:hover { background: #1A1A1A !important; color: #F5F3EF !important; }
@@ -364,7 +365,7 @@ export default function BlueDinosaurAI() {
       `}</style>
 
       <header style={s.header}>
-        <div style={s.wordmark}>Blue Dinosaur AI</div>
+        <div className="wordmark" style={s.wordmark} onClick={handleReset}>Blue Dinosaur AI</div>
         <div style={s.headerRight}>
           <button className="lang-btn" style={s.langBtn} onClick={toggleLang}>
             {lang === "es" ? "EN" : "ES"}
@@ -548,7 +549,7 @@ export default function BlueDinosaurAI() {
 const s = {
   root: { minHeight: "100vh", background: "#F5F3EF", display: "flex", flexDirection: "column", fontFamily: "'DM Sans', sans-serif", color: "#1A1A1A" },
   header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid #E8E4DC", position: "sticky", top: 0, background: "#F5F3EF", zIndex: 10 },
-  wordmark: { fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: "#1A1A1A" },
+  wordmark: { fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: "#1A1A1A", cursor: "pointer", transition: "opacity 0.15s" },
   headerRight: { display: "flex", alignItems: "center", gap: 10 },
   langBtn: { fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", background: "transparent", border: "1px solid #D8D4CC", color: "#888", letterSpacing: "0.05em" },
   historyBtn: { fontSize: 12, fontWeight: 500, padding: "5px 12px", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6, position: "relative" },
