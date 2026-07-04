@@ -147,7 +147,7 @@ export default function BlueDinosaurAI() {
 
   function handleBack() {
     if (historyStack.length === 0) {
-      // Go back to input
+      // No more questions to go back to — return to input
       setStage("input");
       setHistory([]);
       setCurrentQuestion(null);
@@ -157,10 +157,19 @@ export default function BlueDinosaurAI() {
     }
     const prev = historyStack[historyStack.length - 1];
     setHistoryStack(stack => stack.slice(0, -1));
-    setHistory(prev.history.slice(0, -2)); // remove last Q&A pair
+    // If this was the first question, go back to input
+    if (prev.questionCount === 0) {
+      setStage("input");
+      setHistory([]);
+      setCurrentQuestion(null);
+      setQuestionCount(0);
+      setError("");
+      return;
+    }
+    setHistory(prev.history.slice(0, -2));
     setCurrentQuestion(prev.question);
     setQuestionCount(prev.questionCount);
-    setStage(prev.stage === "input" ? "questioning" : prev.stage);
+    setStage("questioning");
     setError("");
   }
 
