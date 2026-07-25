@@ -73,7 +73,7 @@ const UI = {
     historyBtn: "Historial",
     clearAll: "Borrar todo",
     historyEmpty: "Tus prompts generados aparecerán aquí.",
-    footer: "Blue Dinosaur AI · Hecho para pensar mejor antes de preguntar",
+    footer: "Blue Dinosaur · Hecho para pensar mejor antes de preguntar",
     maxImages: "Máximo 5 imágenes permitidas.",
     invalidType: "Solo se permiten imágenes JPG, PNG, GIF o WebP.",
     maxSize: "Cada imagen debe ser menor a 5MB.",
@@ -102,7 +102,7 @@ const UI = {
     historyBtn: "History",
     clearAll: "Clear all",
     historyEmpty: "Your generated prompts will appear here.",
-    footer: "Blue Dinosaur AI · Made to think better before you ask",
+    footer: "Blue Dinosaur · Made to think better before you ask",
     maxImages: "Maximum 5 images allowed.",
     invalidType: "Only JPG, PNG, GIF or WebP images are allowed.",
     maxSize: "Each image must be smaller than 5MB.",
@@ -372,7 +372,7 @@ export default function BlueDinosaurAI() {
       <header style={s.header}>
         <div style={s.logoArea} className="wordmark" onClick={handleReset}>
           <img src="/dino.png" alt="" style={s.dinoIcon} onError={e => e.target.style.display='none'} />
-          <span style={s.wordmark}>Blue Dinosaur AI</span>
+          <span style={s.wordmark}>Blue Dinosaur</span>
         </div>
         <div style={s.headerRight}>
           <button className="lang-btn" style={s.langBtn} onClick={toggleLang}>
