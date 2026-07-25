@@ -128,8 +128,8 @@ export default function Landing() {
       {/* NAV */}
       <nav className="l-nav">
         <a href="/" className="l-nav-logo">
-          <img src="/dino.png" alt="Blue Dinosaur AI" onError={e => { e.target.style.display='none'; }} />
-          Blue Dinosaur AI
+          <img src="/dino.png" alt="Blue Dinosaur" onError={e => { e.target.style.display='none'; }} />
+          Blue Dinosaur
         </a>
         <div className="l-nav-cta">
           <a href="#como-funciona" className="l-btn-ghost-nav">Cómo funciona</a>
@@ -142,9 +142,9 @@ export default function Landing() {
         <div className="l-dino-tracks" style={{top:"15%",left:"5%"}}>🦶🦶</div>
         <div className="l-dino-tracks" style={{bottom:"20%",right:"6%"}}>🦶🦶</div>
         <div className="l-badge">🦕 Beta pública</div>
-        <img src="/dino.png" alt="Blue Dinosaur AI" className="l-dino-hero" onError={e => e.target.style.display='none'} />
+        <img src="/dino.png" alt="Blue Dinosaur" className="l-dino-hero" onError={e => e.target.style.display='none'} />
         <h1 className="l-h1">Prompts <span className="l-accent">completos</span><br/>y precisos, siempre.</h1>
-        <p className="l-hero-sub">Describe lo que necesitas, aunque esté incompleto. Blue Dinosaur AI te hace las preguntas correctas y genera el prompt perfecto para cualquier IA.</p>
+        <p className="l-hero-sub">Describe lo que necesitas, aunque esté incompleto. Blue Dinosaur te hace las preguntas correctas y genera el prompt perfecto para cualquier IA.</p>
         <div className="l-hero-actions">
           <a href="/app" className="l-btn-primary">Empezar →</a>
           <a href="#como-funciona" className="l-btn-ghost">Ver cómo funciona</a>
@@ -186,7 +186,7 @@ export default function Landing() {
             <div className="l-mockup-step">
               <div className="l-step-num">02</div>
               <div>
-                <div className="l-step-label">Blue Dinosaur AI pregunta</div>
+                <div className="l-step-label">Blue Dinosaur pregunta</div>
                 <div className="l-step-text">¿Qué nivel de experiencia tienes con inversiones?</div>
                 <div className="l-step-opts">
                   <span className="l-opt">Principiante</span>
@@ -203,13 +203,13 @@ export default function Landing() {
       {/* VALUE */}
       <section className="l-section">
         <div className="l-section-inner">
-          <span className="l-section-tag">Por qué Blue Dinosaur AI</span>
+          <span className="l-section-tag">Por qué Blue Dinosaur</span>
           <h2 className="l-section-title">El problema no es la IA.<br/>Es la pregunta.</h2>
           <p className="l-section-sub">Las herramientas de IA son poderosas. Pero solo dan lo que les pides, y muchas veces no sabemos exactamente qué pedir.</p>
           <div className="l-value-grid">
-            <div className="l-value-card"><div className="l-value-icon">🎯</div><div className="l-value-title">Claridad desde el inicio</div><div className="l-value-desc">Blue Dinosaur AI descubre lo que realmente necesitas, aunque tú mismo no lo tengas del todo claro todavía.</div></div>
+            <div className="l-value-card"><div className="l-value-icon">🎯</div><div className="l-value-title">Claridad desde el inicio</div><div className="l-value-desc">Blue Dinosaur descubre lo que realmente necesitas, aunque tú mismo no lo tengas del todo claro todavía.</div></div>
             <div className="l-value-card"><div className="l-value-icon">⚡</div><div className="l-value-title">Menos intentos, mejor resultado</div><div className="l-value-desc">Un prompt preciso desde el principio te ahorra varios mensajes de correcciones. Llegas al resultado más rápido.</div></div>
-            <div className="l-value-card"><div className="l-value-icon">🔌</div><div className="l-value-title">Funciona con cualquier IA</div><div className="l-value-desc">El prompt que genera Blue Dinosaur AI lo usas en Claude, ChatGPT, Gemini, Midjourney o cualquier herramienta.</div></div>
+            <div className="l-value-card"><div className="l-value-icon">🔌</div><div className="l-value-title">Funciona con cualquier IA</div><div className="l-value-desc">El prompt que genera Blue Dinosaur lo usas en Claude, ChatGPT, Gemini, Midjourney o cualquier herramienta.</div></div>
           </div>
         </div>
       </section>
@@ -220,9 +220,9 @@ export default function Landing() {
           <span className="l-section-tag">La diferencia</span>
           <h2 className="l-section-title">Antes y después</h2>
           <div className="l-ba-grid">
-            <div className="l-ba-box"><div className="l-ba-label">Sin Blue Dinosaur AI</div><div className="l-ba-text">"explícame el cambio climático"</div></div>
+            <div className="l-ba-box"><div className="l-ba-label">Sin Blue Dinosaur</div><div className="l-ba-text">"explícame el cambio climático"</div></div>
             <div className="l-ba-arrow">→</div>
-            <div className="l-ba-box l-ba-after"><div className="l-ba-label">Con Blue Dinosaur AI</div><div className="l-ba-text">Actúa como científico divulgador. Explícame las causas y consecuencias del cambio climático a nivel de México, en términos accesibles para alguien sin formación científica. Incluye datos recientes y 3 acciones concretas que puedo tomar hoy.</div></div>
+            <div className="l-ba-box l-ba-after"><div className="l-ba-label">Con Blue Dinosaur</div><div className="l-ba-text">Actúa como científico divulgador. Explícame las causas y consecuencias del cambio climático a nivel de México, en términos accesibles para alguien sin formación científica. Incluye datos recientes y 3 acciones concretas que puedo tomar hoy.</div></div>
           </div>
           <div className="l-stats-row">
             <div className="l-stat"><div className="l-stat-num">60s</div><div className="l-stat-label">para tu prompt listo</div></div>
@@ -251,9 +251,9 @@ export default function Landing() {
       {/* CTA */}
       <section className="l-cta-section">
         <div className="l-section-inner">
-          <img src="/dino.png" alt="Blue Dinosaur AI" className="l-cta-dino" onError={e => e.target.style.display='none'} />
+          <img src="/dino.png" alt="Blue Dinosaur" className="l-cta-dino" onError={e => e.target.style.display='none'} />
           <h2 className="l-cta-title">La IA ya es poderosa.<br/>Aprende a usarla mejor.</h2>
-          <p className="l-cta-sub">Describe lo que necesitas y Blue Dinosaur AI genera el prompt que realmente funciona.</p>
+          <p className="l-cta-sub">Describe lo que necesitas y Blue Dinosaur genera el prompt que realmente funciona.</p>
           <a href="/app" className="l-btn-primary">Empezar →</a>
           <p className="l-cta-note">Sin registro · Sin tarjeta · Listo en segundos</p>
         </div>
@@ -263,9 +263,9 @@ export default function Landing() {
       <footer className="l-footer">
         <div className="l-footer-logo">
           <div className="l-footer-dino">🦕</div>
-          Blue Dinosaur AI
+          Blue Dinosaur
         </div>
-        <div className="l-footer-copy">© 2026 Blue Dinosaur AI · Beta</div>
+        <div className="l-footer-copy">© 2026 Blue Dinosaur · Beta</div>
       </footer>
     </div>
   );
