@@ -588,7 +588,7 @@ const s = {
   primary: { display: "block", width: "100%", padding: "13px 20px", background: C.accent, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", boxShadow: "0 4px 12px rgba(27,79,114,0.2)" },
   ghost: { padding: "13px 18px", background: "transparent", border: `1.5px solid ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" },
   row: { display: "flex", gap: 8, alignItems: "center" },
-  promptBox: { background: C.accentSoft, border: `1px solid rgba(27,79,114,0.2)`, borderRadius: 10, padding: "18px 20px", marginBottom: 20, maxHeight: 240, overflowY: "auto" },
+  promptBox: { background: C.accentSoft, border: `1px solid rgba(27,79,114,0.2)`, borderRadius: 10, padding: "18px 20px", marginBottom: 20 },
   promptText: { fontSize: 13, color: C.accent, lineHeight: 1.75, fontFamily: "'DM Mono', monospace", whiteSpace: "pre-wrap" },
   error: { fontSize: 12, color: "#C0392B", marginBottom: 12, fontFamily: "'DM Mono', monospace" },
   loadingRow: { display: "flex", justifyContent: "center", paddingTop: 16 },
