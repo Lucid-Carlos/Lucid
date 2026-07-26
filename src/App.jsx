@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from "react";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const PROMPTS = {
   es: `Eres un experto en prompt engineering. Ayudas al usuario a clarificar lo que quiere preguntarle a un LLM o herramienta de IA (imágenes, video, etc.).
 
 El usuario puede proporcionar una o más imágenes como referencia. Si lo hace, analízalas y úsalas para generar un prompt más específico y preciso.
+
+El usuario también puede adjuntar un documento PDF. Si lo hace, su contenido aparecerá entre triple comillas ("""), precedido de [Documento adjunto: ...]. Úsalo como contexto para entender mejor lo que necesita y generar un prompt más preciso.
 
 REGLAS ESTRICTAS DE FORMATO:
 
@@ -28,6 +33,8 @@ REGLAS:
   en: `You are an expert in prompt engineering. You help users clarify what they want to ask an LLM or AI image/video tool.
 
 The user may provide one or more images as reference. If they do, analyze them and use them to generate a more specific and accurate prompt.
+
+The user may also attach a PDF document. If they do, its content will appear between triple quotes ("""), preceded by [Attached document: ...]. Use it as context to better understand what they need and generate a more accurate prompt.
 
 STRICT FORMAT RULES:
 
@@ -58,6 +65,13 @@ const UI = {
     placeholder: "Escribe tu idea aquí, aunque esté incompleta...",
     placeholderImages: "Describe qué quieres hacer con estas imágenes (opcional)...",
     uploadBtn: "Subir imágenes (opcional, hasta 5)",
+    pdfBtn: "Subir PDF (opcional)",
+    pdfReady: "Documento listo",
+    pdfTruncated: "Documento largo: se usará solo una parte",
+    pdfInvalid: "Solo se permiten archivos PDF.",
+    pdfTooBig: "El PDF debe ser menor a 10MB.",
+    pdfNoText: "No pude leer texto de este PDF (puede ser un escaneo o imagen).",
+    pdfError: "No pude procesar el PDF. Intenta con otro.",
     analyzeBtn: "Analizar →",
     questionLabel: "Pregunta",
     yourAnswer: "Tu respuesta",
@@ -70,15 +84,6 @@ const UI = {
     newBtn: "← Nuevo",
     copyBtn: "Copiar prompt",
     copiedBtn: "✓ Copiado",
-    shareBtn: "Compartir",
-    sharedLinkCopied: "✓ Link copiado",
-    sharedEyebrow: "Hecho con Blue Dinosaur",
-    sharedHeading: "Mira este prompt",
-    sharedBody: "Alguien armó este prompt en Blue Dinosaur. Cópialo, o adáptalo a lo que tú necesitas.",
-    sharedIdeaLabel: "La idea original",
-    sharedPromptLabel: "El prompt que salió",
-    adaptBtn: "Adaptar a lo mío →",
-    tryItBtn: "Crear el mío →",
     historyBtn: "Historial",
     clearAll: "Borrar todo",
     historyEmpty: "Tus prompts generados aparecerán aquí.",
@@ -96,6 +101,13 @@ const UI = {
     placeholder: "Write your idea here, even if it's incomplete...",
     placeholderImages: "Describe what you want to do with these images (optional)...",
     uploadBtn: "Upload images (optional, up to 5)",
+    pdfBtn: "Upload PDF (optional)",
+    pdfReady: "Document ready",
+    pdfTruncated: "Long document: only part will be used",
+    pdfInvalid: "Only PDF files are allowed.",
+    pdfTooBig: "The PDF must be smaller than 10MB.",
+    pdfNoText: "I couldn't read text from this PDF (it may be a scan or image).",
+    pdfError: "I couldn't process the PDF. Try another one.",
     analyzeBtn: "Analyze →",
     questionLabel: "Question",
     yourAnswer: "Your answer",
@@ -108,15 +120,6 @@ const UI = {
     newBtn: "← New",
     copyBtn: "Copy prompt",
     copiedBtn: "✓ Copied",
-    shareBtn: "Share",
-    sharedLinkCopied: "✓ Link copied",
-    sharedEyebrow: "Made with Blue Dinosaur",
-    sharedHeading: "Check out this prompt",
-    sharedBody: "Someone built this prompt in Blue Dinosaur. Copy it, or adapt it to what you need.",
-    sharedIdeaLabel: "The original idea",
-    sharedPromptLabel: "The prompt it produced",
-    adaptBtn: "Adapt it to mine →",
-    tryItBtn: "Create my own →",
     historyBtn: "History",
     clearAll: "Clear all",
     historyEmpty: "Your generated prompts will appear here.",
@@ -161,46 +164,8 @@ function getHistory() {
   return JSON.parse(localStorage.getItem("bluedinosauurai_history") || "[]");
 }
 
-// --- Compartir: empaquetar y desempaquetar el prompt dentro del propio link ---
-// Codifica en base64 seguro para URLs, manejando acentos y ñ correctamente.
-function encodeShare(payload) {
-  try {
-    const json = JSON.stringify(payload);
-    // encodeURIComponent + unescape convierte el texto UTF-8 (acentos, ñ) a bytes
-    // que btoa puede procesar sin romperse.
-    const b64 = btoa(unescape(encodeURIComponent(json)));
-    // base64 estándar usa +, / y = que no son ideales en URLs; los reemplazamos.
-    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  } catch (e) {
-    return "";
-  }
-}
-
-function decodeShare(str) {
-  try {
-    // Revertimos el reemplazo de caracteres seguros para URL.
-    let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
-    while (b64.length % 4) b64 += "=";
-    const json = decodeURIComponent(escape(atob(b64)));
-    return JSON.parse(json);
-  } catch (e) {
-    return null;
-  }
-}
-
-// Lee el parámetro ?s= de la URL actual y devuelve el payload compartido, o null.
-function readShareFromURL() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const s = params.get("s");
-    if (!s) return null;
-    return decodeShare(s);
-  } catch (e) {
-    return null;
-  }
-}
-
 const MAX_IMAGES = 5;
+const MAX_PDF_CHARS = 12000; // tope de texto del PDF para controlar el costo de tokens
 
 // Brand colors matching landing page
 const C = {
@@ -233,22 +198,14 @@ export default function BlueDinosaurAI() {
   const [promptHistory, setPromptHistory] = useState([]);
   const [originalIdea, setOriginalIdea] = useState("");
   const [images, setImages] = useState([]);
-  const [sharedData, setSharedData] = useState(null);
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [pdfDoc, setPdfDoc] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
 
   const t = UI[lang];
 
-  useEffect(() => {
-    setPromptHistory(getHistory());
-    // Al cargar, revisamos si la URL trae un prompt compartido.
-    const shared = readShareFromURL();
-    if (shared && shared.prompt) {
-      setSharedData(shared);
-      if (shared.lang === "es" || shared.lang === "en") setLang(shared.lang);
-      setStage("shared");
-    }
-  }, []);
+  useEffect(() => { setPromptHistory(getHistory()); }, []);
 
   function toggleLang() { setLang(l => l === "es" ? "en" : "es"); }
 
@@ -275,6 +232,41 @@ export default function BlueDinosaurAI() {
   }
 
   function removeImage(index) { setImages(prev => prev.filter((_, i) => i !== index)); }
+
+  async function extractPdfText(file) {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(" ") + "\n\n";
+      if (text.length > MAX_PDF_CHARS) break;
+    }
+    return text.trim();
+  }
+
+  async function handlePdfUpload(e) {
+    const file = e.target.files?.[0];
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+    if (!file) return;
+    setError("");
+    if (file.type !== "application/pdf") { setError(t.pdfInvalid); return; }
+    if (file.size > 10 * 1024 * 1024) { setError(t.pdfTooBig); return; }
+    setPdfLoading(true);
+    try {
+      let text = await extractPdfText(file);
+      if (!text) { setError(t.pdfNoText); setPdfLoading(false); return; }
+      const truncated = text.length > MAX_PDF_CHARS;
+      if (truncated) text = text.slice(0, MAX_PDF_CHARS);
+      setPdfDoc({ name: file.name, text, truncated });
+    } catch (err) {
+      setError(t.pdfError);
+    }
+    setPdfLoading(false);
+  }
+
+  function removePdf() { setPdfDoc(null); }
 
   async function callClaude(messages) {
     const response = await fetch("/.netlify/functions/claude", {
@@ -322,20 +314,26 @@ export default function BlueDinosaurAI() {
   }
 
   async function handleSubmitInput() {
-    if (!userInput.trim() && images.length === 0) return;
-    const idea = userInput.trim() || "Generate a prompt based on these images";
+    if (!userInput.trim() && images.length === 0 && !pdfDoc) return;
+    const typed = userInput.trim();
+    const idea = typed || (pdfDoc ? (lang === "es" ? `Prompt basado en ${pdfDoc.name}` : `Prompt based on ${pdfDoc.name}`) : "Generate a prompt based on these images");
     setOriginalIdea(idea);
     setHistoryStack([]);
     setLoading(true); setError("");
     try {
+      const pdfContext = pdfDoc ? `[Documento adjunto: ${pdfDoc.name}]\n"""\n${pdfDoc.text}\n"""\n\n` : "";
+      const fallback = images.length > 0
+        ? "Generate a prompt based on these images"
+        : (pdfDoc ? (lang === "es" ? "Genera un prompt usando el documento adjunto." : "Generate a prompt using the attached document.") : "");
+      const textForModel = pdfContext + (typed || fallback);
       let userContent;
       if (images.length > 0) {
         userContent = [
           ...images.map(img => ({ type: "image", source: { type: "base64", media_type: img.mediaType, data: img.base64 } })),
-          { type: "text", text: userInput.trim() || "Generate a prompt based on these images" },
+          { type: "text", text: textForModel },
         ];
       } else {
-        userContent = userInput.trim();
+        userContent = textForModel;
       }
       const msgs = [{ role: "user", content: userContent }];
       const result = await callClaude(msgs);
@@ -392,7 +390,7 @@ export default function BlueDinosaurAI() {
     setCurrentQuestion(null); setQuestionCount(0);
     setFinalPrompt(""); setError(""); setCopied(false);
     setCustomAnswer(""); setOriginalIdea("");
-    setImages([]); setHistoryStack([]);
+    setImages([]); setHistoryStack([]); setPdfDoc(null);
   }
 
   function clearHistory() {
@@ -400,46 +398,8 @@ export default function BlueDinosaurAI() {
     setPromptHistory([]);
   }
 
-  // Genera el link con la idea y el prompt empaquetados, y lo copia al portapapeles.
-  function handleShare() {
-    const payload = { idea: originalIdea, prompt: finalPrompt, lang };
-    const encoded = encodeShare(payload);
-    if (!encoded) return;
-    const url = `${window.location.origin}${window.location.pathname}?s=${encoded}`;
-    const doCopy = () => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); };
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(doCopy).catch(() => fallbackCopy(url, doCopy));
-      } else { fallbackCopy(url, doCopy); }
-    } catch (e) { fallbackCopy(url, doCopy); }
-  }
-
-  // Quita el ?s=... de la barra de direcciones sin recargar la página.
-  function clearShareURL() {
-    try {
-      window.history.replaceState({}, "", window.location.pathname);
-    } catch (e) { /* sin efecto si el navegador no lo permite */ }
-  }
-
-  // "Adaptar": carga la idea compartida en el input y arranca el flujo normal.
-  function handleAdapt() {
-    const idea = sharedData?.idea || "";
-    clearShareURL();
-    setSharedData(null);
-    setUserInput(idea);
-    setStage("input");
-    setError("");
-  }
-
-  // "Crear el mío": empieza de cero, sin precargar nada.
-  function handleFreshStart() {
-    clearShareURL();
-    setSharedData(null);
-    handleReset();
-  }
-
   const progress = stage === "input" ? 0 : stage === "final" ? 100 : questionCount * 30;
-  const canSubmit = userInput.trim() || images.length > 0;
+  const canSubmit = userInput.trim() || images.length > 0 || !!pdfDoc;
 
   return (
     <div style={s.root}>
@@ -460,9 +420,6 @@ export default function BlueDinosaurAI() {
         .primary:active { transform: scale(0.99); }
         .ghost:hover { border-color: #1B4F72 !important; color: #1B4F72 !important; }
         .copy-btn:hover { background: #1B4F72 !important; color: #fff !important; border-color: #1B4F72 !important; }
-        .share-btn:hover { border-color: #1B4F72 !important; color: #1B4F72 !important; border-style: solid !important; }
-        .adapt-btn:hover { background: #154060 !important; }
-        .fresh-btn:hover { border-color: #1B4F72 !important; color: #1B4F72 !important; }
         .back:hover { color: #1B4F72 !important; }
         .lang-btn:hover { background: #D6EAF8 !important; color: #1B4F72 !important; border-color: #C9D8E8 !important; }
         .wordmark:hover { opacity: 0.7; }
@@ -535,6 +492,24 @@ export default function BlueDinosaurAI() {
                 <button className="upload-btn" style={s.uploadBtn} onClick={() => fileInputRef.current?.click()}>
                   <span style={{ fontSize: 18, marginRight: 8 }}>📎</span>
                   {t.uploadBtn}
+                </button>
+              )}
+
+              <input ref={pdfInputRef} type="file" accept="application/pdf" style={{ display: "none" }} onChange={handlePdfUpload} />
+              {pdfDoc ? (
+                <div style={s.pdfChip}>
+                  <span style={{ fontSize: 18 }}>📄</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={s.pdfName}>{pdfDoc.name}</div>
+                    <div style={s.pdfMeta}>{pdfDoc.truncated ? t.pdfTruncated : t.pdfReady}</div>
+                  </div>
+                  <button className="remove-img" style={s.pdfRemove} onClick={removePdf}>✕</button>
+                </div>
+              ) : (
+                <button className="upload-btn" style={{...s.uploadBtn, marginTop: 10}} onClick={() => pdfInputRef.current?.click()} disabled={pdfLoading}>
+                  {pdfLoading
+                    ? <span style={{...s.spinner, borderTopColor: C.accent, borderColor: "rgba(27,79,114,0.2)"}} />
+                    : <><span style={{ fontSize: 16, marginRight: 8 }}>📄</span>{t.pdfBtn}</>}
                 </button>
               )}
 
@@ -618,41 +593,6 @@ export default function BlueDinosaurAI() {
                   {copied ? t.copiedBtn : t.copyBtn}
                 </button>
               </div>
-              <button className="share-btn" style={s.shareBtn} onClick={handleShare}>
-                {linkCopied ? t.sharedLinkCopied : `↗ ${t.shareBtn}`}
-              </button>
-            </div>
-          )}
-
-          {stage === "shared" && sharedData && (
-            <div className="fade-up" style={s.section}>
-              <div style={s.eyebrow}>{t.sharedEyebrow}</div>
-              <h2 style={s.heading}>{t.sharedHeading}</h2>
-              <p style={s.body}>{t.sharedBody}</p>
-
-              <div style={s.sharedLabel}>{t.sharedIdeaLabel}</div>
-              <div style={s.sharedIdeaBox}>
-                <p style={s.sharedIdeaText}>"{sharedData.idea}"</p>
-              </div>
-
-              <div style={s.sharedLabel}>{t.sharedPromptLabel}</div>
-              <div style={s.promptBox}>
-                <p style={s.promptText}>{sharedData.prompt}</p>
-              </div>
-
-              <div style={s.row}>
-                <button className="copy-btn"
-                  style={{...s.primary, flex: 1, background: copied ? C.accent : C.accentSoft, color: copied ? "#fff" : C.accent, border: `1.5px solid ${C.accent}`}}
-                  onClick={() => handleCopy(sharedData.prompt)}>
-                  {copied ? t.copiedBtn : t.copyBtn}
-                </button>
-              </div>
-              <button className="primary adapt-btn" style={{...s.primary, marginTop: 8}} onClick={handleAdapt}>
-                {t.adaptBtn}
-              </button>
-              <button className="ghost fresh-btn" style={{...s.ghost, width: "100%", marginTop: 8, textAlign: "center"}} onClick={handleFreshStart}>
-                {t.tryItBtn}
-              </button>
             </div>
           )}
 
@@ -734,10 +674,6 @@ const s = {
   row: { display: "flex", gap: 8, alignItems: "center" },
   promptBox: { background: C.accentSoft, border: `1px solid rgba(27,79,114,0.2)`, borderRadius: 10, padding: "18px 20px", marginBottom: 20 },
   promptText: { fontSize: 13, color: C.accent, lineHeight: 1.75, fontFamily: "'DM Mono', monospace", whiteSpace: "pre-wrap" },
-  shareBtn: { width: "100%", marginTop: 8, padding: "12px 20px", background: "transparent", border: `1.5px dashed ${C.border}`, borderRadius: 10, color: C.textMuted, fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center" },
-  sharedLabel: { fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", color: C.textMuted, textTransform: "uppercase", marginBottom: 8, fontFamily: "'DM Mono', monospace" },
-  sharedIdeaBox: { background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 18px", marginBottom: 20 },
-  sharedIdeaText: { fontSize: 14, color: C.textLight, lineHeight: 1.6, fontStyle: "italic" },
   error: { fontSize: 12, color: "#C0392B", marginBottom: 12, fontFamily: "'DM Mono', monospace" },
   loadingRow: { display: "flex", justifyContent: "center", paddingTop: 16 },
   spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
@@ -753,4 +689,8 @@ const s = {
   historyIdea: { fontSize: 12, color: C.textLight, lineHeight: 1.5, marginBottom: 8, fontStyle: "italic" },
   historyPrompt: { fontSize: 12, color: C.textLight, lineHeight: 1.6, fontFamily: "'DM Mono', monospace", marginBottom: 10, maxHeight: 80, overflowY: "auto", whiteSpace: "pre-wrap" },
   histCopyBtn: { fontSize: 11, fontWeight: 500, padding: "4px 10px", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s" },
+  pdfChip: { display: "flex", alignItems: "center", gap: 10, background: C.bgCard, border: `1.5px solid ${C.border}`, borderRadius: 10, padding: "10px 12px", marginTop: 10, marginBottom: 4 },
+  pdfName: { fontSize: 13, color: C.text, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  pdfMeta: { fontSize: 11, color: C.textMuted, fontFamily: "'DM Mono', monospace", marginTop: 2 },
+  pdfRemove: { width: 22, height: 22, background: "rgba(0,0,0,0.05)", border: "none", borderRadius: 6, fontSize: 11, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", padding: 0, flexShrink: 0 },
 };
