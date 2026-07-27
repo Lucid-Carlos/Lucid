@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { LENSES, NICHO_ORDER } from "./lenses.js";
 
 export default function Landing() {
   useEffect(() => {
@@ -88,6 +89,15 @@ export default function Landing() {
       .l-footer-logo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: #6B7E96; }
       .l-footer-dino { width: 18px; height: 18px; background: #7EB8D4; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; opacity: 0.7; }
       .l-footer-copy { font-size: 12px; color: #6B7E96; font-family: 'DM Mono', monospace; }
+      .l-niche-section { padding: 72px 24px; border-top: 1px solid #C9D8E8; }
+      .l-niche-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-top: 36px; }
+      .l-niche-card { display: block; text-align: left; text-decoration: none; background: #EDF2F7; border: 1px solid transparent; border-radius: 14px; padding: 18px; transition: transform 0.15s, box-shadow 0.15s; }
+      .l-niche-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(27,79,114,0.14); }
+      .l-niche-emoji { font-size: 24px; }
+      .l-niche-name { font-size: 15px; font-weight: 600; color: #1B4F72; margin-top: 8px; }
+      .l-niche-desc { font-size: 12.5px; color: #5A6E84; line-height: 1.4; margin-top: 4px; }
+      .l-niche-soon { background: #F1F1EE; border: 1px solid #D8DEE6; opacity: 0.65; cursor: default; }
+      .l-niche-tag { font-size: 10px; font-weight: 500; color: #8A97A4; }
       @media (max-width: 768px) {
         .l-nav { padding: 14px 20px; }
         .l-hero { padding: 60px 20px 40px; }
@@ -156,6 +166,36 @@ export default function Landing() {
           <span>Gemini</span><span className="l-dot"></span>
           <span>Midjourney</span><span className="l-dot"></span>
           <span>y más</span>
+        </div>
+      </section>
+
+      {/* ESPECIALIZACIONES */}
+      <section className="l-niche-section">
+        <div className="l-section-inner" style={{textAlign:"center"}}>
+          <span className="l-section-tag">Especializaciones</span>
+          <h2 className="l-section-title">¿Para qué lo necesitas?</h2>
+          <p className="l-section-sub" style={{margin:"0 auto"}}>Elige un tema y Blue Dinosaur se adapta a él, con preguntas y reglas hechas para eso.</p>
+          <div className="l-niche-grid">
+            {NICHO_ORDER.map((slug) => {
+              const n = LENSES[slug];
+              if (n.soon) {
+                return (
+                  <div key={slug} className="l-niche-card l-niche-soon">
+                    <div className="l-niche-emoji">{n.emoji}</div>
+                    <div className="l-niche-name">{n.label} <span className="l-niche-tag">(pronto)</span></div>
+                    <div className="l-niche-desc">{n.tagline}</div>
+                  </div>
+                );
+              }
+              return (
+                <a key={slug} href={`/app/${slug}`} className="l-niche-card">
+                  <div className="l-niche-emoji">{n.emoji}</div>
+                  <div className="l-niche-name">{n.label}</div>
+                  <div className="l-niche-desc">{n.tagline}</div>
+                </a>
+              );
+            })}
+          </div>
         </div>
       </section>
 
