@@ -290,7 +290,7 @@ export default function BlueDinosaurAI() {
     if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
     const raw = data.content.map(b => b.text || "").join("");
     return parseResponse(raw);
-  }
+  
   }
 
   async function processResult(result, newHistory) {
