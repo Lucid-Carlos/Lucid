@@ -275,10 +275,14 @@ export default function BlueDinosaurAI() {
   function removePdf() { setPdfDoc(null); }
 
   async function callClaude(messages) {
+    const lensBlock = lens.lens
+      ? `\n\nMODO ESPECIALIZADO ACTIVO: ${lens.label}.\nUsa lo siguiente para decidir que preguntar y como redactar el PROMPT final. Respeta SIEMPRE el formato de arriba (QUESTION/OPTION o PROMPT), sin excepciones.\n${lens.lens}`
+      : "";
+    const system = PROMPTS[lang] + lensBlock;
     const response = await fetch("/.netlify/functions/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system: PROMPTS[lang], messages }),
+      body: JSON.stringify({ system, messages }),
     });
     const text = await response.text();
     let data;
@@ -286,6 +290,7 @@ export default function BlueDinosaurAI() {
     if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
     const raw = data.content.map(b => b.text || "").join("");
     return parseResponse(raw);
+  }
   }
 
   async function processResult(result, newHistory) {
