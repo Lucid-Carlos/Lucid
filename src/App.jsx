@@ -449,7 +449,9 @@ export default function BlueDinosaurAI() {
       <header style={s.header}>
         <div style={s.logoArea} className="wordmark" onClick={handleReset}>
           <img src="/dino.png" alt="" style={s.dinoIcon} onError={e => e.target.style.display='none'} />
-          <span style={s.wordmark}>Blue Dinosaur</span>
+          <span style={s.wordmark}>
+            {lens.slug === "general" ? "Blue Dinosaur" : `Blue Dinosaur ${lens.label}`}
+          </span>
         </div>
         <div style={s.headerRight}>
           <button className="lang-btn" style={s.langBtn} onClick={toggleLang}>
