@@ -3,6 +3,9 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+import { useParams } from "react-router-dom";
+import { getLens } from "./lenses.js";
+
 const PROMPTS = {
   es: `Eres un experto en prompt engineering. Ayudas al usuario a clarificar lo que quiere preguntarle a un LLM o herramienta de IA (imágenes, video, etc.).
 
