@@ -208,6 +208,9 @@ export default function BlueDinosaurAI() {
 
   const t = UI[lang];
 
+  const { nicho } = useParams();
+  const lens = getLens(nicho);
+
   useEffect(() => { setPromptHistory(getHistory()); }, []);
 
   function toggleLang() { setLang(l => l === "es" ? "en" : "es"); }
