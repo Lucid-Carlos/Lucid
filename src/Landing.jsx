@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LENSES, NICHO_ORDER } from "./lenses.js";
+import { NICHO_ORDER, lensCard } from "./lenses.js";
 
 const T = {
   es: {
@@ -65,7 +65,7 @@ const T = {
     navHow: "How it works",
     navStart: "Start →",
     heroBadge: "🦕 Public beta",
-    heroH1: <>Complete, precise <span className="l-accent">prompts</span><br/>every time.</>,
+    heroH1: <><span style={{ whiteSpace: "nowrap" }}>Complete, precise <span className="l-accent">prompts</span></span><br/>every time.</>,
     heroSub: "Describe what you need, even if it's incomplete. Blue Dinosaur asks the right questions and generates the perfect prompt for any AI.",
     heroStart: "Start →",
     heroSee: "See how it works",
@@ -314,7 +314,7 @@ export default function Landing() {
           <p className="l-section-sub" style={{margin:"0 auto"}}>{t.nicheSub}</p>
           <div className="l-niche-grid">
             {NICHO_ORDER.map((slug) => {
-              const n = LENSES[slug];
+              const n = lensCard(slug, lang);
               if (n.soon) {
                 return (
                   <div key={slug} className="l-niche-card l-niche-soon">
