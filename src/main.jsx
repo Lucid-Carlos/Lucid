@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./Landing.jsx";
 import App from "./App.jsx";
+import FeedbackButton from "./FeedbackButton.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -12,6 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <Route path="/app" element={<App />} />
         <Route path="/app/:nicho" element={<App />} />
       </Routes>
+      <FeedbackButton />
     </BrowserRouter>
   </React.StrictMode>
 );
