@@ -1,7 +1,141 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LENSES, NICHO_ORDER } from "./lenses.js";
 
+const T = {
+  es: {
+    navHow: "Cómo funciona",
+    navStart: "Empezar →",
+    heroBadge: "🦕 Beta pública",
+    heroH1: <>Prompts <span className="l-accent">completos</span><br/>y precisos, siempre.</>,
+    heroSub: "Describe lo que necesitas, aunque esté incompleto. Blue Dinosaur te hace las preguntas correctas y genera el prompt perfecto para cualquier IA.",
+    heroStart: "Empezar →",
+    heroSee: "Ver cómo funciona",
+    compatWith: "Compatible con",
+    compatMore: "y más",
+    nicheTag: "Especializaciones",
+    nicheTitle: "¿Para qué lo necesitas?",
+    nicheSub: "Elige un tema y Blue Dinosaur se adapta a él, con preguntas y reglas hechas para eso.",
+    nicheSoon: "(pronto)",
+    howTag: "Cómo funciona",
+    howTitle: <>De idea vaga a prompt preciso<br/>en 60 segundos</>,
+    howSub: "Sin tecnicismos. Sin saber prompt engineering. Solo dile lo que quieres.",
+    mockEyebrow: "Prompts. Completos, Precisos.",
+    mockTitle: "Empieza con tu idea",
+    mockStep1Label: "Tu idea",
+    mockStep1Text: "\"quiero saber algo sobre invertir en México...\"",
+    mockStep2Label: "Blue Dinosaur pregunta",
+    mockStep2Text: "¿Qué nivel de experiencia tienes con inversiones?",
+    mockOpt1: "Principiante",
+    mockOpt2: "Experiencia básica",
+    mockOpt3: "Avanzado",
+    mockResult: "🦕 Actúa como asesor financiero. Tengo experiencia básica en inversiones y quiero entender las mejores opciones disponibles en México en 2025: CETES, ETFs y fondos de inversión. Explica ventajas, riesgos y cómo empezar con menos de $10,000 MXN.",
+    valueTag: "Por qué Blue Dinosaur",
+    valueTitle: <>El problema no es la IA.<br/>Es la pregunta.</>,
+    valueSub: "Las herramientas de IA son poderosas. Pero solo dan lo que les pides, y muchas veces no sabemos exactamente qué pedir.",
+    v1Title: "Claridad desde el inicio",
+    v1Desc: "Blue Dinosaur descubre lo que realmente necesitas, aunque tú mismo no lo tengas del todo claro todavía.",
+    v2Title: "Menos intentos, mejor resultado",
+    v2Desc: "Un prompt preciso desde el principio te ahorra varios mensajes de correcciones. Llegas al resultado más rápido.",
+    v3Title: "Funciona con cualquier IA",
+    v3Desc: "El prompt que genera Blue Dinosaur lo usas en Claude, ChatGPT, Gemini, Midjourney o cualquier herramienta.",
+    baTag: "La diferencia",
+    baTitle: "Antes y después",
+    baBeforeLabel: "Sin Blue Dinosaur",
+    baBeforeText: "\"explícame el cambio climático\"",
+    baAfterLabel: "Con Blue Dinosaur",
+    baAfterText: "Actúa como científico divulgador. Explícame las causas y consecuencias del cambio climático a nivel de México, en términos accesibles para alguien sin formación científica. Incluye datos recientes y 3 acciones concretas que puedo tomar hoy.",
+    stat1Label: "para tu prompt listo",
+    stat2Label: "preguntas máximo",
+    stat3Label: "herramientas compatibles",
+    stat4Label: "sin registro",
+    proBadge: "🦕 Próximamente",
+    proTitle: "Plan Pro está en camino.",
+    proSub: "Prompts ilimitados, historial completo y más. Sé el primero en saber cuando esté disponible.",
+    proPlaceholder: "tu@email.com",
+    proBtn: "Avisarme →",
+    proMsg: "✓ Listo, te avisamos cuando esté disponible.",
+    waitlistError: "Error al enviar. Intenta de nuevo.",
+    ctaTitle: <>La IA ya es poderosa.<br/>Aprende a usarla mejor.</>,
+    ctaSub: "Describe lo que necesitas y Blue Dinosaur genera el prompt que realmente funciona.",
+    ctaStart: "Empezar →",
+    ctaNote: "Sin registro · Sin tarjeta · Listo en segundos",
+    footerCopy: "© 2026 Blue Dinosaur · Beta",
+  },
+  en: {
+    navHow: "How it works",
+    navStart: "Start →",
+    heroBadge: "🦕 Public beta",
+    heroH1: <>Complete, precise <span className="l-accent">prompts</span><br/>every time.</>,
+    heroSub: "Describe what you need, even if it's incomplete. Blue Dinosaur asks the right questions and generates the perfect prompt for any AI.",
+    heroStart: "Start →",
+    heroSee: "See how it works",
+    compatWith: "Works with",
+    compatMore: "and more",
+    nicheTag: "Specializations",
+    nicheTitle: "What do you need it for?",
+    nicheSub: "Pick a topic and Blue Dinosaur adapts to it, with questions and rules built for it.",
+    nicheSoon: "(soon)",
+    howTag: "How it works",
+    howTitle: <>From vague idea to precise prompt<br/>in 60 seconds</>,
+    howSub: "No jargon. No prompt engineering needed. Just tell it what you want.",
+    mockEyebrow: "Prompts. Rich, Precise.",
+    mockTitle: "Start with your idea",
+    mockStep1Label: "Your idea",
+    mockStep1Text: "\"i want to know something about investing in Mexico...\"",
+    mockStep2Label: "Blue Dinosaur asks",
+    mockStep2Text: "What's your experience level with investing?",
+    mockOpt1: "Beginner",
+    mockOpt2: "Some experience",
+    mockOpt3: "Advanced",
+    mockResult: "🦕 Act as a financial advisor. I have some experience with investing and want to understand the best options available in Mexico in 2025: CETES, ETFs and mutual funds. Explain the advantages, risks and how to start with less than $10,000 MXN.",
+    valueTag: "Why Blue Dinosaur",
+    valueTitle: <>The problem isn't the AI.<br/>It's the question.</>,
+    valueSub: "AI tools are powerful. But they only give you what you ask for, and often we don't know exactly what to ask.",
+    v1Title: "Clarity from the start",
+    v1Desc: "Blue Dinosaur uncovers what you really need, even when you're not fully sure yourself yet.",
+    v2Title: "Fewer tries, better results",
+    v2Desc: "A precise prompt from the start saves you rounds of corrections. You get to the result faster.",
+    v3Title: "Works with any AI",
+    v3Desc: "Use the prompt Blue Dinosaur generates in Claude, ChatGPT, Gemini, Midjourney or any tool.",
+    baTag: "The difference",
+    baTitle: "Before and after",
+    baBeforeLabel: "Without Blue Dinosaur",
+    baBeforeText: "\"explain climate change to me\"",
+    baAfterLabel: "With Blue Dinosaur",
+    baAfterText: "Act as a science communicator. Explain the causes and consequences of climate change for Mexico, in terms accessible to someone with no scientific background. Include recent data and 3 concrete actions I can take today.",
+    stat1Label: "for your prompt",
+    stat2Label: "questions max",
+    stat3Label: "compatible tools",
+    stat4Label: "no signup",
+    proBadge: "🦕 Coming soon",
+    proTitle: "Pro plan is on the way.",
+    proSub: "Unlimited prompts, full history and more. Be the first to know when it's available.",
+    proPlaceholder: "you@email.com",
+    proBtn: "Notify me →",
+    proMsg: "✓ Done, we'll let you know when it's ready.",
+    waitlistError: "Something went wrong. Please try again.",
+    ctaTitle: <>AI is already powerful.<br/>Learn to use it better.</>,
+    ctaSub: "Describe what you need and Blue Dinosaur generates the prompt that actually works.",
+    ctaStart: "Start →",
+    ctaNote: "No signup · No card · Ready in seconds",
+    footerCopy: "© 2026 Blue Dinosaur · Beta",
+  },
+};
+
 export default function Landing() {
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem("bd_lang") || "en"; } catch { return "en"; }
+  });
+  const t = T[lang];
+
+  function toggleLang() {
+    setLang(prev => {
+      const next = prev === "es" ? "en" : "es";
+      try { localStorage.setItem("bd_lang", next); } catch {}
+      return next;
+    });
+  }
+
   useEffect(() => {
     // Inject styles
     const style = document.createElement("style");
@@ -18,6 +152,8 @@ export default function Landing() {
       .l-btn-ghost-nav:hover { color: #1A1A1A; background: #EDF2F7; }
       .l-btn-primary-nav { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: #fff; background: #1B4F72; border: none; cursor: pointer; padding: 8px 18px; border-radius: 8px; text-decoration: none; transition: opacity 0.2s; }
       .l-btn-primary-nav:hover { opacity: 0.85; }
+      .l-btn-lang { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: #6B7E96; background: transparent; border: 1px solid #C9D8E8; cursor: pointer; padding: 6px 10px; border-radius: 8px; letter-spacing: 0.05em; transition: color 0.2s, border-color 0.2s; }
+      .l-btn-lang:hover { color: #1A1A1A; border-color: #1B4F72; }
       .l-hero { min-height: 88vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 24px 60px; position: relative; overflow: hidden; }
       .l-dino-tracks { position: absolute; font-size: 18px; opacity: 0.06; pointer-events: none; user-select: none; letter-spacing: 8px; }
       .l-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: #1B4F72; background: #D6EAF8; border: 1px solid rgba(27,79,114,0.2); padding: 5px 14px; border-radius: 20px; margin-bottom: 32px; letter-spacing: 0.05em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
@@ -115,7 +251,7 @@ export default function Landing() {
   function handleWaitlist(e) {
     e.preventDefault();
     const email = document.getElementById("wl-email").value;
-    
+
     fetch("/", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -129,7 +265,7 @@ export default function Landing() {
       })
       .catch(() => {
         document.getElementById("wl-msg").style.display = "block";
-        document.getElementById("wl-msg").textContent = "Error al enviar. Intenta de nuevo.";
+        document.getElementById("wl-msg").textContent = t.waitlistError;
       });
   }
 
@@ -142,8 +278,9 @@ export default function Landing() {
           Blue Dinosaur
         </a>
         <div className="l-nav-cta">
-          <a href="#como-funciona" className="l-btn-ghost-nav">Cómo funciona</a>
-          <a href="/app" className="l-btn-primary-nav">Empezar →</a>
+          <button className="l-btn-lang" onClick={toggleLang}>{lang === "es" ? "EN" : "ES"}</button>
+          <a href="#como-funciona" className="l-btn-ghost-nav">{t.navHow}</a>
+          <a href="/app" className="l-btn-primary-nav">{t.navStart}</a>
         </div>
       </nav>
 
@@ -151,30 +288,30 @@ export default function Landing() {
       <section className="l-hero">
         <div className="l-dino-tracks" style={{top:"15%",left:"5%"}}>🦶🦶</div>
         <div className="l-dino-tracks" style={{bottom:"20%",right:"6%"}}>🦶🦶</div>
-        <div className="l-badge">🦕 Beta pública</div>
+        <div className="l-badge">{t.heroBadge}</div>
         <img src="/dino.png" alt="Blue Dinosaur" className="l-dino-hero" onError={e => e.target.style.display='none'} />
-        <h1 className="l-h1">Prompts <span className="l-accent">completos</span><br/>y precisos, siempre.</h1>
-        <p className="l-hero-sub">Describe lo que necesitas, aunque esté incompleto. Blue Dinosaur te hace las preguntas correctas y genera el prompt perfecto para cualquier IA.</p>
+        <h1 className="l-h1">{t.heroH1}</h1>
+        <p className="l-hero-sub">{t.heroSub}</p>
         <div className="l-hero-actions">
-          <a href="/app" className="l-btn-primary">Empezar →</a>
-          <a href="#como-funciona" className="l-btn-ghost">Ver cómo funciona</a>
+          <a href="/app" className="l-btn-primary">{t.heroStart}</a>
+          <a href="#como-funciona" className="l-btn-ghost">{t.heroSee}</a>
         </div>
         <div className="l-compatible">
-          <span>Compatible con</span><span className="l-dot"></span>
+          <span>{t.compatWith}</span><span className="l-dot"></span>
           <span>Claude</span><span className="l-dot"></span>
           <span>ChatGPT</span><span className="l-dot"></span>
           <span>Gemini</span><span className="l-dot"></span>
           <span>Midjourney</span><span className="l-dot"></span>
-          <span>y más</span>
+          <span>{t.compatMore}</span>
         </div>
       </section>
 
       {/* ESPECIALIZACIONES */}
       <section className="l-niche-section">
         <div className="l-section-inner" style={{textAlign:"center"}}>
-          <span className="l-section-tag">Especializaciones</span>
-          <h2 className="l-section-title">¿Para qué lo necesitas?</h2>
-          <p className="l-section-sub" style={{margin:"0 auto"}}>Elige un tema y Blue Dinosaur se adapta a él, con preguntas y reglas hechas para eso.</p>
+          <span className="l-section-tag">{t.nicheTag}</span>
+          <h2 className="l-section-title">{t.nicheTitle}</h2>
+          <p className="l-section-sub" style={{margin:"0 auto"}}>{t.nicheSub}</p>
           <div className="l-niche-grid">
             {NICHO_ORDER.map((slug) => {
               const n = LENSES[slug];
@@ -182,7 +319,7 @@ export default function Landing() {
                 return (
                   <div key={slug} className="l-niche-card l-niche-soon">
                     <div className="l-niche-emoji">{n.emoji}</div>
-                    <div className="l-niche-name">{n.label} <span className="l-niche-tag">(pronto)</span></div>
+                    <div className="l-niche-name">{n.label} <span className="l-niche-tag">{t.nicheSoon}</span></div>
                     <div className="l-niche-desc">{n.tagline}</div>
                   </div>
                 );
@@ -202,9 +339,9 @@ export default function Landing() {
       {/* MOCKUP */}
       <section className="l-mockup-section" id="como-funciona">
         <div className="l-section-inner" style={{textAlign:"center"}}>
-          <span className="l-section-tag">Cómo funciona</span>
-          <h2 className="l-section-title">De idea vaga a prompt preciso<br/>en 60 segundos</h2>
-          <p className="l-section-sub" style={{margin:"0 auto"}}>Sin tecnicismos. Sin saber prompt engineering. Solo dile lo que quieres.</p>
+          <span className="l-section-tag">{t.howTag}</span>
+          <h2 className="l-section-title">{t.howTitle}</h2>
+          <p className="l-section-sub" style={{margin:"0 auto"}}>{t.howSub}</p>
         </div>
         <div className="l-mockup">
           <div className="l-mockup-bar">
@@ -214,28 +351,28 @@ export default function Landing() {
             <span style={{fontSize:11,color:"#6B7E96",fontFamily:"DM Mono, monospace",marginLeft:8}}>bluedinosaur.ai/app</span>
           </div>
           <div className="l-mockup-body">
-            <div className="l-mockup-eyebrow">Prompts. Completos, Precisos.</div>
-            <div className="l-mockup-title">Empieza con tu idea</div>
+            <div className="l-mockup-eyebrow">{t.mockEyebrow}</div>
+            <div className="l-mockup-title">{t.mockTitle}</div>
             <div className="l-mockup-step">
               <div className="l-step-num">01</div>
               <div>
-                <div className="l-step-label">Tu idea</div>
-                <div className="l-step-text">"quiero saber algo sobre invertir en México..."</div>
+                <div className="l-step-label">{t.mockStep1Label}</div>
+                <div className="l-step-text">{t.mockStep1Text}</div>
               </div>
             </div>
             <div className="l-mockup-step">
               <div className="l-step-num">02</div>
               <div>
-                <div className="l-step-label">Blue Dinosaur pregunta</div>
-                <div className="l-step-text">¿Qué nivel de experiencia tienes con inversiones?</div>
+                <div className="l-step-label">{t.mockStep2Label}</div>
+                <div className="l-step-text">{t.mockStep2Text}</div>
                 <div className="l-step-opts">
-                  <span className="l-opt">Principiante</span>
-                  <span className="l-opt l-opt-sel">Experiencia básica</span>
-                  <span className="l-opt">Avanzado</span>
+                  <span className="l-opt">{t.mockOpt1}</span>
+                  <span className="l-opt l-opt-sel">{t.mockOpt2}</span>
+                  <span className="l-opt">{t.mockOpt3}</span>
                 </div>
               </div>
             </div>
-            <div className="l-mockup-result">🦕 Actúa como asesor financiero. Tengo experiencia básica en inversiones y quiero entender las mejores opciones disponibles en México en 2025: CETES, ETFs y fondos de inversión. Explica ventajas, riesgos y cómo empezar con menos de $10,000 MXN.</div>
+            <div className="l-mockup-result">{t.mockResult}</div>
           </div>
         </div>
       </section>
@@ -243,13 +380,13 @@ export default function Landing() {
       {/* VALUE */}
       <section className="l-section">
         <div className="l-section-inner">
-          <span className="l-section-tag">Por qué Blue Dinosaur</span>
-          <h2 className="l-section-title">El problema no es la IA.<br/>Es la pregunta.</h2>
-          <p className="l-section-sub">Las herramientas de IA son poderosas. Pero solo dan lo que les pides, y muchas veces no sabemos exactamente qué pedir.</p>
+          <span className="l-section-tag">{t.valueTag}</span>
+          <h2 className="l-section-title">{t.valueTitle}</h2>
+          <p className="l-section-sub">{t.valueSub}</p>
           <div className="l-value-grid">
-            <div className="l-value-card"><div className="l-value-icon">🎯</div><div className="l-value-title">Claridad desde el inicio</div><div className="l-value-desc">Blue Dinosaur descubre lo que realmente necesitas, aunque tú mismo no lo tengas del todo claro todavía.</div></div>
-            <div className="l-value-card"><div className="l-value-icon">⚡</div><div className="l-value-title">Menos intentos, mejor resultado</div><div className="l-value-desc">Un prompt preciso desde el principio te ahorra varios mensajes de correcciones. Llegas al resultado más rápido.</div></div>
-            <div className="l-value-card"><div className="l-value-icon">🔌</div><div className="l-value-title">Funciona con cualquier IA</div><div className="l-value-desc">El prompt que genera Blue Dinosaur lo usas en Claude, ChatGPT, Gemini, Midjourney o cualquier herramienta.</div></div>
+            <div className="l-value-card"><div className="l-value-icon">🎯</div><div className="l-value-title">{t.v1Title}</div><div className="l-value-desc">{t.v1Desc}</div></div>
+            <div className="l-value-card"><div className="l-value-icon">⚡</div><div className="l-value-title">{t.v2Title}</div><div className="l-value-desc">{t.v2Desc}</div></div>
+            <div className="l-value-card"><div className="l-value-icon">🔌</div><div className="l-value-title">{t.v3Title}</div><div className="l-value-desc">{t.v3Desc}</div></div>
           </div>
         </div>
       </section>
@@ -257,18 +394,18 @@ export default function Landing() {
       {/* BEFORE/AFTER */}
       <section style={{background:"#EDF2F7",borderTop:"1px solid #C9D8E8",borderBottom:"1px solid #C9D8E8",padding:"80px 24px"}}>
         <div className="l-section-inner">
-          <span className="l-section-tag">La diferencia</span>
-          <h2 className="l-section-title">Antes y después</h2>
+          <span className="l-section-tag">{t.baTag}</span>
+          <h2 className="l-section-title">{t.baTitle}</h2>
           <div className="l-ba-grid">
-            <div className="l-ba-box"><div className="l-ba-label">Sin Blue Dinosaur</div><div className="l-ba-text">"explícame el cambio climático"</div></div>
+            <div className="l-ba-box"><div className="l-ba-label">{t.baBeforeLabel}</div><div className="l-ba-text">{t.baBeforeText}</div></div>
             <div className="l-ba-arrow">→</div>
-            <div className="l-ba-box l-ba-after"><div className="l-ba-label">Con Blue Dinosaur</div><div className="l-ba-text">Actúa como científico divulgador. Explícame las causas y consecuencias del cambio climático a nivel de México, en términos accesibles para alguien sin formación científica. Incluye datos recientes y 3 acciones concretas que puedo tomar hoy.</div></div>
+            <div className="l-ba-box l-ba-after"><div className="l-ba-label">{t.baAfterLabel}</div><div className="l-ba-text">{t.baAfterText}</div></div>
           </div>
           <div className="l-stats-row">
-            <div className="l-stat"><div className="l-stat-num">60s</div><div className="l-stat-label">para tu prompt listo</div></div>
-            <div className="l-stat"><div className="l-stat-num">3</div><div className="l-stat-label">preguntas máximo</div></div>
-            <div className="l-stat"><div className="l-stat-num">6+</div><div className="l-stat-label">herramientas compatibles</div></div>
-            <div className="l-stat"><div className="l-stat-num">100%</div><div className="l-stat-label">sin registro</div></div>
+            <div className="l-stat"><div className="l-stat-num">60s</div><div className="l-stat-label">{t.stat1Label}</div></div>
+            <div className="l-stat"><div className="l-stat-num">3</div><div className="l-stat-label">{t.stat2Label}</div></div>
+            <div className="l-stat"><div className="l-stat-num">6+</div><div className="l-stat-label">{t.stat3Label}</div></div>
+            <div className="l-stat"><div className="l-stat-num">100%</div><div className="l-stat-label">{t.stat4Label}</div></div>
           </div>
         </div>
       </section>
@@ -276,15 +413,15 @@ export default function Landing() {
       {/* PRO WAITLIST */}
       <section className="l-pro-section">
         <div className="l-section-inner">
-          <div className="l-pro-badge">🦕 Próximamente</div>
-          <h2 className="l-pro-title">Plan Pro está en camino.</h2>
-          <p className="l-pro-sub">Prompts ilimitados, historial completo y más. Sé el primero en saber cuando esté disponible.</p>
+          <div className="l-pro-badge">{t.proBadge}</div>
+          <h2 className="l-pro-title">{t.proTitle}</h2>
+          <p className="l-pro-sub">{t.proSub}</p>
           <form className="l-waitlist-form" onSubmit={handleWaitlist} data-netlify="true" name="waitlist">
             <input type="hidden" name="form-name" value="waitlist" />
-            <input type="email" id="wl-email" className="l-email-input" placeholder="tu@email.com" required />
-            <button type="submit" className="l-submit-btn">Avisarme →</button>
+            <input type="email" id="wl-email" className="l-email-input" placeholder={t.proPlaceholder} required />
+            <button type="submit" className="l-submit-btn">{t.proBtn}</button>
           </form>
-          <p id="wl-msg" className="l-waitlist-msg">✓ Listo, te avisamos cuando esté disponible.</p>
+          <p id="wl-msg" className="l-waitlist-msg">{t.proMsg}</p>
         </div>
       </section>
 
@@ -292,10 +429,10 @@ export default function Landing() {
       <section className="l-cta-section">
         <div className="l-section-inner">
           <img src="/dino.png" alt="Blue Dinosaur" className="l-cta-dino" onError={e => e.target.style.display='none'} />
-          <h2 className="l-cta-title">La IA ya es poderosa.<br/>Aprende a usarla mejor.</h2>
-          <p className="l-cta-sub">Describe lo que necesitas y Blue Dinosaur genera el prompt que realmente funciona.</p>
-          <a href="/app" className="l-btn-primary">Empezar →</a>
-          <p className="l-cta-note">Sin registro · Sin tarjeta · Listo en segundos</p>
+          <h2 className="l-cta-title">{t.ctaTitle}</h2>
+          <p className="l-cta-sub">{t.ctaSub}</p>
+          <a href="/app" className="l-btn-primary">{t.ctaStart}</a>
+          <p className="l-cta-note">{t.ctaNote}</p>
         </div>
       </section>
 
@@ -305,7 +442,7 @@ export default function Landing() {
           <div className="l-footer-dino">🦕</div>
           Blue Dinosaur
         </div>
-        <div className="l-footer-copy">© 2026 Blue Dinosaur · Beta</div>
+        <div className="l-footer-copy">{t.footerCopy}</div>
       </footer>
     </div>
   );
