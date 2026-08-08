@@ -184,7 +184,7 @@ const C = {
 };
 
 export default function BlueDinosaurAI() {
-  const [lang, setLang] = useState("es");
+  const [lang, setLang] = useState("en");
   const [stage, setStage] = useState("input");
   const [userInput, setUserInput] = useState("");
   const [history, setHistory] = useState([]);
