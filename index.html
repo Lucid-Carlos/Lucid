@@ -1,26 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blue Dinosaur — Prompts. Rich, Precise.</title>
+    <title>Blue Dinosaur — Prompts. Completos, Precisos.</title>
 
     <!-- Open Graph: cómo se ve el link al compartirlo en Facebook, WhatsApp, LinkedIn -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Blue Dinosaur AI" />
-    <meta property="og:title" content="Blue Dinosaur AI — The perfect prompt in 60 seconds" />
-    <meta property="og:description" content="Share your idea and we'll give you the perfect prompt in 60 seconds. Copy and paste it into ChatGPT, Claude, Midjourney or any AI." />
+    <meta property="og:title" content="Blue Dinosaur AI — El prompt perfecto en 60 segundos" />
+    <meta property="og:description" content="Comparte tu idea y te damos el prompt perfecto en 60 segundos. Cópialo y pégalo en ChatGPT, Claude, Midjourney o cualquier IA." />
     <meta property="og:url" content="https://bluedinosaur.ai" />
     <meta property="og:image" content="https://bluedinosaur.ai/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:locale:alternate" content="es_MX" />
+    <meta property="og:locale" content="es_MX" />
 
     <!-- Twitter/X: usa una tarjeta grande con imagen -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Blue Dinosaur AI — The perfect prompt in 60 seconds" />
-    <meta name="twitter:description" content="Share your idea and we'll give you the perfect prompt in 60 seconds. Copy and paste it into ChatGPT, Claude, Midjourney or any AI." />
+    <meta name="twitter:title" content="Blue Dinosaur AI — El prompt perfecto en 60 segundos" />
+    <meta name="twitter:description" content="Comparte tu idea y te damos el prompt perfecto en 60 segundos. Cópialo y pégalo en ChatGPT, Claude, Midjourney o cualquier IA." />
     <meta name="twitter:image" content="https://bluedinosaur.ai/og-image.png" />
 
     <!-- Google tag (gtag.js) -->
@@ -33,10 +32,20 @@
     </script>
   </head>
   <body>
-    <!-- Netlify Forms detection -->
+    <!-- Netlify Forms detection: lista de espera Pro -->
     <form name="waitlist" data-netlify="true" hidden>
       <input type="email" name="email" />
     </form>
+
+    <!-- Netlify Forms detection: feedback / comentarios -->
+    <form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <textarea name="message"></textarea>
+      <input type="email" name="email" />
+      <input type="text" name="lang" />
+      <input type="text" name="path" />
+      <input type="text" name="bot-field" />
+    </form>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
