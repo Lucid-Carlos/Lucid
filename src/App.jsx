@@ -184,7 +184,9 @@ const C = {
 };
 
 export default function BlueDinosaurAI() {
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem("bd_lang") || "en"; } catch { return "en"; }
+  });
   const [stage, setStage] = useState("input");
   const [userInput, setUserInput] = useState("");
   const [history, setHistory] = useState([]);
@@ -213,7 +215,7 @@ export default function BlueDinosaurAI() {
 
   useEffect(() => { setPromptHistory(getHistory()); }, []);
 
-  function toggleLang() { setLang(l => l === "es" ? "en" : "es"); }
+  function toggleLang() { setLang(l => { const next = l === "es" ? "en" : "es"; try { localStorage.setItem("bd_lang", next); } catch {} return next; }); }
 
   function handleImageUpload(e) {
     const files = Array.from(e.target.files);
