@@ -154,15 +154,15 @@ export default function Landing() {
       .l-btn-primary-nav:hover { opacity: 0.85; }
       .l-btn-lang { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; color: #6B7E96; background: transparent; border: 1px solid #C9D8E8; cursor: pointer; padding: 6px 10px; border-radius: 8px; letter-spacing: 0.05em; transition: color 0.2s, border-color 0.2s; }
       .l-btn-lang:hover { color: #1A1A1A; border-color: #1B4F72; }
-      .l-hero { min-height: 88vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 24px 60px; position: relative; overflow: hidden; }
+      .l-hero { min-height: 82vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 24px 40px; position: relative; overflow: hidden; }
       .l-dino-tracks { position: absolute; font-size: 18px; opacity: 0.06; pointer-events: none; user-select: none; letter-spacing: 8px; }
       .l-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: #1B4F72; background: #D6EAF8; border: 1px solid rgba(27,79,114,0.2); padding: 5px 14px; border-radius: 20px; margin-bottom: 32px; letter-spacing: 0.05em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
       .l-dino-hero { width: 140px; height: 140px; object-fit: contain; margin-bottom: 28px; animation: l-float 4s ease-in-out infinite; filter: drop-shadow(0 8px 24px rgba(126,184,212,0.3)); }
       @keyframes l-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
       .l-h1 { font-size: clamp(36px, 6vw, 68px); font-weight: 700; line-height: 1.1; letter-spacing: -2px; max-width: 1100px; margin-bottom: 20px; }
       .l-accent { color: #1B4F72; }
-      .l-hero-sub { font-size: 17px; color: #5A6E84; max-width: 440px; margin-bottom: 40px; line-height: 1.65; font-weight: 300; }
-      .l-hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; margin-bottom: 52px; }
+      .l-hero-sub { font-size: 17px; color: #5A6E84; max-width: 440px; margin-bottom: 28px; line-height: 1.65; font-weight: 300; }
+      .l-hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; margin-bottom: 32px; }
       .l-btn-primary { font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500; color: #fff; background: #1B4F72; border: none; cursor: pointer; padding: 14px 28px; border-radius: 10px; text-decoration: none; display: inline-block; box-shadow: 0 4px 16px rgba(27,79,114,0.25); transition: opacity 0.2s, transform 0.15s; }
       .l-btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
       .l-btn-ghost { font-family: 'DM Sans', sans-serif; font-size: 15px; color: #6B7E96; background: transparent; border: 1.5px solid #C9D8E8; cursor: pointer; padding: 13px 24px; border-radius: 10px; text-decoration: none; display: inline-block; transition: border-color 0.2s, color 0.2s; }
@@ -278,6 +278,7 @@ export default function Landing() {
           Blue Dinosaur
         </a>
         <div className="l-nav-cta">
+          <span className="l-badge" style={{ marginBottom: 0 }}>{t.heroBadge}</span>
           <button className="l-btn-lang" onClick={toggleLang}>{lang === "es" ? "EN" : "ES"}</button>
           <a href="#como-funciona" className="l-btn-ghost-nav">{t.navHow}</a>
           <a href="/app" className="l-btn-primary-nav">{t.navStart}</a>
@@ -288,8 +289,6 @@ export default function Landing() {
       <section className="l-hero">
         <div className="l-dino-tracks" style={{top:"15%",left:"5%"}}>🦶🦶</div>
         <div className="l-dino-tracks" style={{bottom:"20%",right:"6%"}}>🦶🦶</div>
-        <div className="l-badge">{t.heroBadge}</div>
-        <img src="/dino.png" alt="Blue Dinosaur" className="l-dino-hero" onError={e => e.target.style.display='none'} />
         <h1 className="l-h1">{t.heroH1}</h1>
         <p className="l-hero-sub">{t.heroSub}</p>
         <div className="l-hero-actions">
