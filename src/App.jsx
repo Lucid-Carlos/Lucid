@@ -211,7 +211,7 @@ export default function BlueDinosaurAI() {
   const t = UI[lang];
 
   const { nicho } = useParams();
-  const lens = getLens(nicho);
+  const lens = getLens(nicho, lang);
 
   useEffect(() => { setPromptHistory(getHistory()); }, []);
 
