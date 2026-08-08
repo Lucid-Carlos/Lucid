@@ -159,7 +159,7 @@ export default function Landing() {
       .l-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: #1B4F72; background: #D6EAF8; border: 1px solid rgba(27,79,114,0.2); padding: 5px 14px; border-radius: 20px; margin-bottom: 32px; letter-spacing: 0.05em; text-transform: uppercase; font-family: 'DM Mono', monospace; }
       .l-dino-hero { width: 140px; height: 140px; object-fit: contain; margin-bottom: 28px; animation: l-float 4s ease-in-out infinite; filter: drop-shadow(0 8px 24px rgba(126,184,212,0.3)); }
       @keyframes l-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-      .l-h1 { font-size: clamp(36px, 6vw, 68px); font-weight: 700; line-height: 1.1; letter-spacing: -2px; max-width: 680px; margin-bottom: 20px; }
+      .l-h1 { font-size: clamp(36px, 6vw, 68px); font-weight: 700; line-height: 1.1; letter-spacing: -2px; max-width: 1100px; margin-bottom: 20px; }
       .l-accent { color: #1B4F72; }
       .l-hero-sub { font-size: 17px; color: #5A6E84; max-width: 440px; margin-bottom: 40px; line-height: 1.65; font-weight: 300; }
       .l-hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; margin-bottom: 52px; }
