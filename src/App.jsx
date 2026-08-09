@@ -167,6 +167,14 @@ function getHistory() {
   return JSON.parse(localStorage.getItem("bluedinosauurai_history") || "[]");
 }
 
+function track(eventName, params) {
+  try {
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", eventName, params || {});
+    }
+  } catch {}
+}
+
 const MAX_IMAGES = 5;
 const MAX_PDF_CHARS = 12000; // tope de texto del PDF para controlar el costo de tokens
 
@@ -306,6 +314,7 @@ export default function BlueDinosaurAI() {
       saveToHistory(originalIdea, result.content || "");
       setPromptHistory(getHistory());
       setFinalPrompt(result.content || "");
+      track("prompt_generado", { lens: lens.slug });
       setStage("final");
     }
   }
@@ -328,6 +337,7 @@ export default function BlueDinosaurAI() {
 
   async function handleSubmitInput() {
     if (!userInput.trim() && images.length === 0 && !pdfDoc) return;
+    track("idea_enviada", { lens: lens.slug });
     const typed = userInput.trim();
     const idea = typed || (pdfDoc ? (lang === "es" ? `Prompt basado en ${pdfDoc.name}` : `Prompt based on ${pdfDoc.name}`) : "Generate a prompt based on these images");
     setOriginalIdea(idea);
@@ -380,7 +390,7 @@ export default function BlueDinosaurAI() {
   function handleCopy(text, id = null) {
     const doCopy = () => {
       if (id) { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); }
-      else { setCopied(true); setTimeout(() => setCopied(false), 2000); }
+      else { setCopied(true); setTimeout(() => setCopied(false), 2000); track("prompt_copiado", { lens: lens.slug }); }
     };
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
