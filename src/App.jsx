@@ -288,8 +288,7 @@ export default function BlueDinosaurAI() {
     const lensBlock = lens.lens
       ? `\n\nMODO ESPECIALIZADO ACTIVO: ${lens.label}.\nUsa lo siguiente para decidir que preguntar y como redactar el PROMPT final. Respeta SIEMPRE el formato de arriba (QUESTION/OPTION o PROMPT), sin excepciones.\n${lens.lens}`
       : "";
-    const system = PROMPTS[lang] + lensBlock;
-    const response = await fetch("/.netlify/functions/claude", {
+const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima prioridad): Detecta el idioma en que el usuario escribió su idea inicial y escribe TODO (QUESTION, OPTION y el PROMPT final) en ESE idioma, sin importar el idioma de la interfaz.";    const response = await fetch("/.netlify/functions/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ system, messages }),
