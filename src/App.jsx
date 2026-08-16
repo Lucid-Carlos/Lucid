@@ -87,6 +87,15 @@ const UI = {
     newBtn: "← Nuevo",
     copyBtn: "Copiar prompt",
     copiedBtn: "✓ Copiado",
+    shareBtn: "Compartir",
+    sharedLinkCopied: "✓ Link copiado",
+    sharedEyebrow: "Hecho con Blue Dinosaur",
+    sharedHeading: "Mira este prompt",
+    sharedBody: "Alguien armó este prompt en Blue Dinosaur. Cópialo, o adáptalo a lo que tú necesitas.",
+    sharedIdeaLabel: "La idea original",
+    sharedPromptLabel: "El prompt que salió",
+    adaptBtn: "Adaptar a lo mío →",
+    tryItBtn: "Crear el mío →",
     historyBtn: "Historial",
     clearAll: "Borrar todo",
     historyEmpty: "Tus prompts generados aparecerán aquí.",
@@ -123,6 +132,15 @@ const UI = {
     newBtn: "← New",
     copyBtn: "Copy prompt",
     copiedBtn: "✓ Copied",
+    shareBtn: "Share",
+    sharedLinkCopied: "✓ Link copied",
+    sharedEyebrow: "Made with Blue Dinosaur",
+    sharedHeading: "Check out this prompt",
+    sharedBody: "Someone built this prompt in Blue Dinosaur. Copy it, or adapt it to what you need.",
+    sharedIdeaLabel: "The original idea",
+    sharedPromptLabel: "The prompt it produced",
+    adaptBtn: "Adapt it to mine →",
+    tryItBtn: "Create my own →",
     historyBtn: "History",
     clearAll: "Clear all",
     historyEmpty: "Your generated prompts will appear here.",
@@ -134,6 +152,40 @@ const UI = {
     customOption: ["other", "write"],
   }
 };
+
+// Empaqueta la idea y el prompt en base64 seguro para URL (maneja acentos y ñ).
+function encodeShare(payload) {
+  try {
+    const json = JSON.stringify(payload);
+    const b64 = btoa(unescape(encodeURIComponent(json)));
+    return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  } catch (e) {
+    return "";
+  }
+}
+
+function decodeShare(str) {
+  try {
+    let b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const json = decodeURIComponent(escape(atob(b64)));
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Lee el parámetro ?s= de la URL actual y devuelve el payload compartido, o null.
+function readShareFromURL() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("s");
+    if (!s) return null;
+    return decodeShare(s);
+  } catch (e) {
+    return null;
+  }
+}
 
 function parseResponse(raw) {
   const text = raw.trim();
@@ -213,6 +265,8 @@ export default function BlueDinosaurAI() {
   const [images, setImages] = useState([]);
   const [pdfDoc, setPdfDoc] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [sharedData, setSharedData] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const fileInputRef = useRef(null);
   const pdfInputRef = useRef(null);
 
@@ -222,6 +276,19 @@ export default function BlueDinosaurAI() {
   const lens = getLens(nicho, lang);
 
   useEffect(() => { setPromptHistory(getHistory()); }, []);
+
+  // Al cargar, si la URL trae ?s=..., muestra la pantalla de prompt compartido.
+  useEffect(() => {
+    const shared = readShareFromURL();
+    if (shared && shared.prompt) {
+      setSharedData(shared);
+      if (shared.lang) {
+        setLang(shared.lang);
+        try { localStorage.setItem("bd_lang", shared.lang); } catch {}
+      }
+      setStage("shared");
+    }
+  }, []);
 
   function toggleLang() { setLang(l => { const next = l === "es" ? "en" : "es"; try { localStorage.setItem("bd_lang", next); } catch {} return next; }); }
 
@@ -288,7 +355,8 @@ export default function BlueDinosaurAI() {
     const lensBlock = lens.lens
       ? `\n\nMODO ESPECIALIZADO ACTIVO: ${lens.label}.\nUsa lo siguiente para decidir que preguntar y como redactar el PROMPT final. Respeta SIEMPRE el formato de arriba (QUESTION/OPTION o PROMPT), sin excepciones.\n${lens.lens}`
       : "";
-const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima prioridad): Detecta el idioma en que el usuario escribió su idea inicial y escribe TODO (QUESTION, OPTION y el PROMPT final) en ESE idioma, sin importar el idioma de la interfaz.";    const response = await fetch("/.netlify/functions/claude", {
+    const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima prioridad): Detecta el idioma en que el usuario escribió su idea inicial y escribe TODO (QUESTION, OPTION y el PROMPT final) en ESE idioma, sin importar el idioma de la interfaz.";
+    const response = await fetch("/.netlify/functions/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ system, messages }),
@@ -299,7 +367,6 @@ const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima priorid
     if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
     const raw = data.content.map(b => b.text || "").join("");
     return parseResponse(raw);
-  
   }
 
   async function processResult(result, newHistory) {
@@ -407,7 +474,45 @@ const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima priorid
     cb();
   }
 
+  // Genera el link con la idea y el prompt empaquetados, y lo copia al portapapeles.
+  function handleShare() {
+    const payload = { idea: originalIdea, prompt: finalPrompt, lang };
+    const encoded = encodeShare(payload);
+    if (!encoded) return;
+    const url = `${window.location.origin}${window.location.pathname}?s=${encoded}`;
+    const doCopy = () => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 2500); track("prompt_compartido", { lens: lens.slug }); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(doCopy).catch(() => fallbackCopy(url, doCopy));
+      } else { fallbackCopy(url, doCopy); }
+    } catch (e) { fallbackCopy(url, doCopy); }
+  }
+
+  // Quita el ?s=... de la barra de direcciones sin recargar la página.
+  function clearShareURL() {
+    try { window.history.replaceState({}, "", window.location.pathname); } catch (e) {}
+  }
+
+  // "Adaptar": carga la idea compartida en el input y arranca el flujo normal.
+  function handleAdapt() {
+    const idea = sharedData?.idea || "";
+    clearShareURL();
+    setSharedData(null);
+    setUserInput(idea);
+    setStage("input");
+    setError("");
+  }
+
+  // "Crear el mío": empieza de cero, sin precargar nada.
+  function handleFreshStart() {
+    clearShareURL();
+    setSharedData(null);
+    handleReset();
+  }
+
   function handleReset() {
+    clearShareURL();
+    setSharedData(null);
     setStage("input"); setUserInput(""); setHistory([]);
     setCurrentQuestion(null); setQuestionCount(0);
     setFinalPrompt(""); setError(""); setCopied(false);
@@ -420,7 +525,7 @@ const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima priorid
     setPromptHistory([]);
   }
 
-  const progress = stage === "input" ? 0 : stage === "final" ? 100 : questionCount * 30;
+  const progress = stage === "input" ? 0 : (stage === "final" || stage === "shared") ? 100 : questionCount * 30;
   const canSubmit = userInput.trim() || images.length > 0 || !!pdfDoc;
 
   return (
@@ -486,6 +591,33 @@ const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima priorid
 
       <div style={s.layout}>
         <main style={{...s.main, marginRight: showHistory ? 340 : 0, transition: "margin-right 0.3s cubic-bezier(0.16,1,0.3,1)"}}>
+
+          {stage === "shared" && sharedData && (
+            <div className="fade-up" style={s.section}>
+              <div style={s.eyebrow}>{t.sharedEyebrow}</div>
+              <h2 style={{...s.heading, fontSize: 22}}>{t.sharedHeading}</h2>
+              <p style={s.body}>{t.sharedBody}</p>
+              {sharedData.idea && (
+                <>
+                  <div style={s.sharedLabel}>{t.sharedIdeaLabel}</div>
+                  <div style={s.sharedIdeaBox}>"{sharedData.idea}"</div>
+                </>
+              )}
+              <div style={s.sharedLabel}>{t.sharedPromptLabel}</div>
+              <div style={s.promptBox}>
+                <p style={s.promptText}>{sharedData.prompt}</p>
+              </div>
+              <div style={s.row}>
+                <button className="copy-btn"
+                  style={{...s.primary, flex: 1, background: copied ? C.accent : C.accentSoft, color: copied ? "#fff" : C.accent, border: `1.5px solid ${C.accent}`}}
+                  onClick={() => handleCopy(sharedData.prompt)}>
+                  {copied ? t.copiedBtn : t.copyBtn}
+                </button>
+                <button className="primary" style={{...s.primary, flex: 1}} onClick={handleAdapt}>{t.adaptBtn}</button>
+              </div>
+              <button className="ghost" style={{...s.ghost, width: "100%", marginTop: 10, textAlign: "center"}} onClick={handleFreshStart}>{t.tryItBtn}</button>
+            </div>
+          )}
 
           {stage === "input" && (
             <div className="fade-up" style={s.section}>
@@ -616,6 +748,9 @@ const system = PROMPTS[lang] + lensBlock + "\n\nREGLA DE IDIOMA (máxima priorid
                   onClick={() => handleCopy(finalPrompt)}>
                   {copied ? t.copiedBtn : t.copyBtn}
                 </button>
+                <button className="ghost" style={s.ghost} onClick={handleShare}>
+                  {linkCopied ? t.sharedLinkCopied : t.shareBtn}
+                </button>
               </div>
             </div>
           )}
@@ -698,6 +833,8 @@ const s = {
   row: { display: "flex", gap: 8, alignItems: "center" },
   promptBox: { background: C.accentSoft, border: `1px solid rgba(27,79,114,0.2)`, borderRadius: 10, padding: "18px 20px", marginBottom: 20 },
   promptText: { fontSize: 13, color: C.accent, lineHeight: 1.75, fontFamily: "'DM Mono', monospace", whiteSpace: "pre-wrap" },
+  sharedLabel: { fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", color: C.textMuted, textTransform: "uppercase", marginBottom: 8, fontFamily: "'DM Mono', monospace" },
+  sharedIdeaBox: { fontSize: 13, color: C.textLight, fontStyle: "italic", lineHeight: 1.6, background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", marginBottom: 18 },
   error: { fontSize: 12, color: "#C0392B", marginBottom: 12, fontFamily: "'DM Mono', monospace" },
   loadingRow: { display: "flex", justifyContent: "center", paddingTop: 16 },
   spinner: { display: "inline-block", width: 16, height: 16, border: "2px solid rgba(255,255,255,0.3)", borderTop: "2px solid #fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" },
