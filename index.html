@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Blue Dinosaur | Rich, precise prompts</title>
-
     <!-- Open Graph: how the link looks when shared on Facebook, WhatsApp, LinkedIn -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Blue Dinosaur" />
@@ -16,13 +15,11 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:locale:alternate" content="es_MX" />
-
     <!-- Twitter/X: large image card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Blue Dinosaur | The perfect prompt in 60 seconds" />
     <meta name="twitter:description" content="Share your idea and get the perfect prompt in 60 seconds. Copy and paste it into ChatGPT, Claude, Midjourney or any AI." />
     <meta name="twitter:image" content="https://bluedinosaur.ai/og-image.png" />
-
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-1GDSTNSVL7"></script>
     <script>
@@ -31,13 +28,29 @@
       gtag('js', new Date());
       gtag('config', 'G-1GDSTNSVL7');
     </script>
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '2839242616458686');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=2839242616458686&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
   </head>
   <body>
     <!-- Netlify Forms detection: Pro waitlist -->
     <form name="waitlist" data-netlify="true" hidden>
       <input type="email" name="email" />
     </form>
-
     <!-- Netlify Forms detection: feedback -->
     <form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden>
       <textarea name="message"></textarea>
@@ -46,7 +59,6 @@
       <input type="text" name="path" />
       <input type="text" name="bot-field" />
     </form>
-
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
