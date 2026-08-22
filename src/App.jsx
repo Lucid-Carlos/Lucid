@@ -220,9 +220,21 @@ function getHistory() {
 }
 
 function track(eventName, params) {
+  // Google Analytics
   try {
     if (typeof window !== "undefined" && typeof window.gtag === "function") {
       window.gtag("event", eventName, params || {});
+    }
+  } catch {}
+  // Meta Pixel
+  try {
+    if (typeof window !== "undefined" && typeof window.fbq === "function") {
+      window.fbq("trackCustom", eventName, params || {});
+      // El copiado es la conversion real: lo mandamos tambien como evento
+      // estandar (Lead) para poder optimizar las campanas directo desde Meta.
+      if (eventName === "prompt_copiado") {
+        window.fbq("track", "Lead", params || {});
+      }
     }
   } catch {}
 }
