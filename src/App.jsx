@@ -115,6 +115,7 @@ const UI = {
     limitTitle: "Se te acabaron las corridas gratis",
     limitBody: "Corre prompts ilimitados con Blue Dinosaur Pro.",
     limitCta: "Quiero Pro",
+    runTrimmed: "Vista previa recortada. Copia el prompt y córrelo en tu IA para la respuesta completa.",
   },
   en: {
     eyebrow: "Prompts. Rich, Precise.",
@@ -169,6 +170,7 @@ const UI = {
     limitTitle: "You're out of free runs",
     limitBody: "Run unlimited prompts with Blue Dinosaur Pro.",
     limitCta: "Get Pro",
+    runTrimmed: "Preview trimmed. Copy the prompt and run it in your AI for the full answer.",
   }
 };
 
@@ -304,6 +306,7 @@ export default function BlueDinosaurAI() {
   const [runError, setRunError] = useState(""); // "" | "error" | "limit"
   const [runsRemaining, setRunsRemaining] = useState(runsLeft());
   const [refineNote, setRefineNote] = useState("");
+  const [runTrimmed, setRunTrimmed] = useState(false);
   const fileInputRef = useRef(null);
   const pdfInputRef = useRef(null);
 
@@ -416,12 +419,15 @@ export default function BlueDinosaurAI() {
       track("run_limit_alcanzado", { lens: lens.slug });
       return;
     }
-    setRunLoading(true); setRunError("");
+    setRunLoading(true); setRunError(""); setRunTrimmed(false);
     try {
       const response = await fetch("/.netlify/functions/claude", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ max_tokens: 2000, messages: [{ role: "user", content: promptText }] }),
+        // max_tokens acotado: mantiene la corrida por debajo del limite de
+        // tiempo de la funcion de Netlify. Respuestas muy largas la hacian
+        // timeout; 800 termina rapido y confiable, y sale mas barata.
+        body: JSON.stringify({ max_tokens: 800, messages: [{ role: "user", content: promptText }] }),
       });
       const text = await response.text();
       let data;
@@ -430,6 +436,7 @@ export default function BlueDinosaurAI() {
       const out = (data.content || []).map(b => b.text || "").join("");
       if (!out.trim()) throw new Error("empty");
       setRunResult(out);
+      if (data.stop_reason === "max_tokens") setRunTrimmed(true);
       setRunsRemaining(recordRun());
       track("prompt_corrido", { lens: lens.slug });
     } catch (e) {
@@ -450,7 +457,7 @@ export default function BlueDinosaurAI() {
       setPromptHistory(getHistory());
       setFinalPrompt(result.content || "");
       track("prompt_generado", { lens: lens.slug });
-      setRunResult(""); setRunError(""); setRefineNote(""); // corrida limpia por prompt nuevo
+      setRunResult(""); setRunError(""); setRefineNote(""); setRunTrimmed(false); // corrida limpia por prompt nuevo
       setStage("final");
     }
   }
@@ -588,7 +595,7 @@ export default function BlueDinosaurAI() {
     setFinalPrompt(""); setError(""); setCopied(false);
     setCustomAnswer(""); setOriginalIdea("");
     setImages([]); setHistoryStack([]); setPdfDoc(null);
-    setRunResult(""); setRunError(""); setRefineNote("");
+    setRunResult(""); setRunError(""); setRefineNote(""); setRunTrimmed(false);
   }
 
   function clearHistory() {
@@ -837,6 +844,7 @@ export default function BlueDinosaurAI() {
                 <div className="fade-up" style={s.runResultBox}>
                   <div style={s.runResultLabel}>{t.runResultLabel}</div>
                   <p style={s.runResultText}>{runResult}</p>
+                  {runTrimmed && <div style={s.runTrimmedNote}>{t.runTrimmed}</div>}
                   <div style={s.runsLeftRow}>{t.runsLeftLabel} {runsRemaining}</div>
                   <div style={s.refineRow}>
                     <input
@@ -979,6 +987,7 @@ const s = {
   runResultLabel: { fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", color: C.accent, textTransform: "uppercase", marginBottom: 10, fontFamily: "'DM Mono', monospace" },
   runResultText: { fontSize: 13, color: C.text, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "'DM Mono', monospace" },
   runsLeftRow: { fontSize: 11, color: C.textMuted, marginTop: 12, fontFamily: "'DM Mono', monospace" },
+  runTrimmedNote: { fontSize: 11, color: C.textMuted, marginTop: 10, fontStyle: "italic", lineHeight: 1.5 },
   refineRow: { display: "flex", gap: 8, marginTop: 12 },
   refineInput: { flex: 1, background: C.bgCard, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 13, fontFamily: "'DM Sans', sans-serif" },
   refineBtn: { padding: "9px 16px", background: C.accent, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" },
