@@ -13,8 +13,8 @@ exports.handler = async (event) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 500,
+        model: body.model || "claude-sonnet-4-6",
+        max_tokens: body.max_tokens || 2000,
         system: body.system,
         messages: body.messages,
       }),
