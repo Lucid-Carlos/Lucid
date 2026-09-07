@@ -425,9 +425,9 @@ export default function BlueDinosaurAI() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // max_tokens acotado: mantiene la corrida por debajo del limite de
-        // tiempo de la funcion de Netlify. Respuestas muy largas la hacian
-        // timeout; 800 termina rapido y confiable, y sale mas barata.
-        body: JSON.stringify({ max_tokens: 800, messages: [{ role: "user", content: promptText }] }),
+        // tiempo de la funcion de Netlify. 1200 cubre casi todo prompt normal
+        // sin llegar al timeout; los pedidos gigantes salen recortados (nota).
+        body: JSON.stringify({ max_tokens: 1200, messages: [{ role: "user", content: promptText }] }),
       });
       const text = await response.text();
       let data;
