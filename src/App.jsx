@@ -5,6 +5,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 import { useParams } from "react-router-dom";
 import { getLens } from "./lenses.js";
+import { canRun, recordRun, runsLeft } from "./runLimit";
 
 const PROMPTS = {
   es: `Eres un experto en prompt engineering. Ayudas al usuario a clarificar lo que quiere preguntarle a un LLM o herramienta de IA (imágenes, video, etc.).
@@ -105,6 +106,15 @@ const UI = {
     maxSize: "Cada imagen debe ser menor a 5MB.",
     networkError: "Error de red. Intenta de nuevo.",
     customOption: ["otro", "escribo"],
+    runBtn: "Ver resultado",
+    runResultLabel: "Resultado",
+    runsLeftLabel: "Corridas gratis restantes:",
+    refinePlaceholder: "¿Qué le ajustarías? (más corto, más formal…)",
+    refineBtn: "Ajustar",
+    runError: "Algo falló. Intenta de nuevo — no se descontó tu corrida.",
+    limitTitle: "Se te acabaron las corridas gratis",
+    limitBody: "Corre prompts ilimitados con Blue Dinosaur Pro.",
+    limitCta: "Quiero Pro",
   },
   en: {
     eyebrow: "Prompts. Rich, Precise.",
@@ -150,6 +160,15 @@ const UI = {
     maxSize: "Each image must be smaller than 5MB.",
     networkError: "Network error. Please try again.",
     customOption: ["other", "write"],
+    runBtn: "See result",
+    runResultLabel: "Result",
+    runsLeftLabel: "Free runs left:",
+    refinePlaceholder: "What would you tweak? (shorter, more formal…)",
+    refineBtn: "Refine",
+    runError: "Something failed. Try again — your run wasn't used.",
+    limitTitle: "You're out of free runs",
+    limitBody: "Run unlimited prompts with Blue Dinosaur Pro.",
+    limitCta: "Get Pro",
   }
 };
 
@@ -279,6 +298,12 @@ export default function BlueDinosaurAI() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [sharedData, setSharedData] = useState(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  // --- Correr el prompt in-product ---
+  const [runResult, setRunResult] = useState("");
+  const [runLoading, setRunLoading] = useState(false);
+  const [runError, setRunError] = useState(""); // "" | "error" | "limit"
+  const [runsRemaining, setRunsRemaining] = useState(runsLeft());
+  const [refineNote, setRefineNote] = useState("");
   const fileInputRef = useRef(null);
   const pdfInputRef = useRef(null);
 
@@ -381,6 +406,38 @@ export default function BlueDinosaurAI() {
     return parseResponse(raw);
   }
 
+  // Corre el prompt final contra el modelo (sin el system de prompt-engineering)
+  // y muestra la respuesta. Cada corrida — inicial o refinamiento — pasa por
+  // aqui y descuenta del limite gratis SOLO si sale bien.
+  async function handleRun(promptText) {
+    if (!promptText || !promptText.trim()) return;
+    if (!canRun()) {
+      setRunError("limit");
+      track("run_limit_alcanzado", { lens: lens.slug });
+      return;
+    }
+    setRunLoading(true); setRunError("");
+    try {
+      const response = await fetch("/.netlify/functions/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ max_tokens: 2000, messages: [{ role: "user", content: promptText }] }),
+      });
+      const text = await response.text();
+      let data;
+      try { data = JSON.parse(text); } catch(e) { throw new Error("parse"); }
+      if (!response.ok) throw new Error(data.error?.message || `Error ${response.status}`);
+      const out = (data.content || []).map(b => b.text || "").join("");
+      if (!out.trim()) throw new Error("empty");
+      setRunResult(out);
+      setRunsRemaining(recordRun());
+      track("prompt_corrido", { lens: lens.slug });
+    } catch (e) {
+      setRunError("error");
+    }
+    setRunLoading(false);
+  }
+
   async function processResult(result, newHistory) {
     setHistory(newHistory);
     if (result.type === "question" && questionCount < 3) {
@@ -393,6 +450,7 @@ export default function BlueDinosaurAI() {
       setPromptHistory(getHistory());
       setFinalPrompt(result.content || "");
       track("prompt_generado", { lens: lens.slug });
+      setRunResult(""); setRunError(""); setRefineNote(""); // corrida limpia por prompt nuevo
       setStage("final");
     }
   }
@@ -530,6 +588,7 @@ export default function BlueDinosaurAI() {
     setFinalPrompt(""); setError(""); setCopied(false);
     setCustomAnswer(""); setOriginalIdea("");
     setImages([]); setHistoryStack([]); setPdfDoc(null);
+    setRunResult(""); setRunError(""); setRefineNote("");
   }
 
   function clearHistory() {
@@ -548,6 +607,7 @@ export default function BlueDinosaurAI() {
         body { background: #F5F3EF; }
         textarea { font-family: 'DM Mono', monospace; resize: none; }
         textarea:focus { outline: none; }
+        input:focus { outline: none; }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
@@ -569,6 +629,7 @@ export default function BlueDinosaurAI() {
         .clear-btn:hover { color: #C0392B !important; }
         .upload-btn:hover { border-color: #1B4F72 !important; color: #1B4F72 !important; }
         .remove-img:hover { background: rgba(192,57,43,0.15) !important; color: #C0392B !important; }
+        .run-cta:hover { background: #6AA7C6 !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #C9D8E8; border-radius: 2px; }
@@ -764,6 +825,53 @@ export default function BlueDinosaurAI() {
                   {linkCopied ? t.sharedLinkCopied : t.shareBtn}
                 </button>
               </div>
+
+              {/* Correr el prompt in-product */}
+              {runError !== "limit" && (
+                <button className="primary" style={{...s.runBtn, opacity: runLoading ? 0.5 : 1}} onClick={() => handleRun(finalPrompt)} disabled={runLoading}>
+                  {runLoading ? <span style={s.spinner} /> : t.runBtn}
+                </button>
+              )}
+
+              {runResult && (
+                <div className="fade-up" style={s.runResultBox}>
+                  <div style={s.runResultLabel}>{t.runResultLabel}</div>
+                  <p style={s.runResultText}>{runResult}</p>
+                  <div style={s.runsLeftRow}>{t.runsLeftLabel} {runsRemaining}</div>
+                  <div style={s.refineRow}>
+                    <input
+                      style={s.refineInput}
+                      placeholder={t.refinePlaceholder}
+                      value={refineNote}
+                      onChange={e => setRefineNote(e.target.value)}
+                    />
+                    <button className="primary"
+                      style={{...s.refineBtn, opacity: runLoading || !refineNote.trim() ? 0.5 : 1}}
+                      onClick={() => {
+                        if (!refineNote.trim()) return;
+                        const note = refineNote.trim();
+                        setRefineNote("");
+                        const label = lang === "es" ? "Ajuste solicitado" : "Requested tweak";
+                        handleRun(`${finalPrompt}\n\n${label}: ${note}`);
+                      }}
+                      disabled={runLoading || !refineNote.trim()}>
+                      {t.refineBtn}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {runError === "error" && <p style={{...s.error, marginTop: 12}}>{t.runError}</p>}
+
+              {runError === "limit" && (
+                <div className="fade-up" style={s.limitBox}>
+                  <div style={s.limitTitle}>{t.limitTitle}</div>
+                  <div style={s.limitBody}>{t.limitBody}</div>
+                  <button className="run-cta" style={s.limitCta} onClick={() => {/* TODO: enganchar a waitlist Pro / checkout */}}>
+                    {t.limitCta}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -866,4 +974,16 @@ const s = {
   pdfName: { fontSize: 13, color: C.text, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   pdfMeta: { fontSize: 11, color: C.textMuted, fontFamily: "'DM Mono', monospace", marginTop: 2 },
   pdfRemove: { width: 22, height: 22, background: "rgba(0,0,0,0.05)", border: "none", borderRadius: 6, fontSize: 11, color: "#888", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s", padding: 0, flexShrink: 0 },
+  runBtn: { display: "block", width: "100%", marginTop: 12, padding: "13px 20px", background: C.accent, border: "none", borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", textAlign: "center", boxShadow: "0 4px 12px rgba(27,79,114,0.2)" },
+  runResultBox: { background: "#fff", border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 20px", marginTop: 16 },
+  runResultLabel: { fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", color: C.accent, textTransform: "uppercase", marginBottom: 10, fontFamily: "'DM Mono', monospace" },
+  runResultText: { fontSize: 13, color: C.text, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "'DM Mono', monospace" },
+  runsLeftRow: { fontSize: 11, color: C.textMuted, marginTop: 12, fontFamily: "'DM Mono', monospace" },
+  refineRow: { display: "flex", gap: 8, marginTop: 12 },
+  refineInput: { flex: 1, background: C.bgCard, border: `1.5px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.text, fontSize: 13, fontFamily: "'DM Sans', sans-serif" },
+  refineBtn: { padding: "9px 16px", background: C.accent, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" },
+  limitBox: { background: C.accent, color: "#fff", borderRadius: 10, padding: "22px 20px", marginTop: 16, textAlign: "center" },
+  limitTitle: { fontSize: 16, fontWeight: 700, marginBottom: 6 },
+  limitBody: { fontSize: 13, opacity: 0.85, marginBottom: 14 },
+  limitCta: { display: "inline-block", width: "auto", padding: "10px 22px", background: C.accentLight, border: "none", borderRadius: 8, color: C.accent, fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s" },
 };
