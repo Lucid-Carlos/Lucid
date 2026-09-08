@@ -116,6 +116,9 @@ const UI = {
     limitBody: "Corre prompts ilimitados con Blue Dinosaur Pro.",
     limitCta: "Quiero Pro",
     runTrimmed: "Vista previa recortada. Copia el prompt y córrelo en tu IA para la respuesta completa.",
+    proPlaceholder: "Tu correo",
+    proThanks: "¡Listo! Te avisamos cuando Pro esté disponible.",
+    proError: "No se pudo enviar. Intenta de nuevo.",
   },
   en: {
     eyebrow: "Prompts. Rich, Precise.",
@@ -171,6 +174,9 @@ const UI = {
     limitBody: "Run unlimited prompts with Blue Dinosaur Pro.",
     limitCta: "Get Pro",
     runTrimmed: "Preview trimmed. Copy the prompt and run it in your AI for the full answer.",
+    proPlaceholder: "Your email",
+    proThanks: "You're in! We'll email you when Pro launches.",
+    proError: "Couldn't send. Try again.",
   }
 };
 
@@ -307,6 +313,8 @@ export default function BlueDinosaurAI() {
   const [runsRemaining, setRunsRemaining] = useState(runsLeft());
   const [refineNote, setRefineNote] = useState("");
   const [runTrimmed, setRunTrimmed] = useState(false);
+  const [proEmail, setProEmail] = useState("");
+  const [proStatus, setProStatus] = useState(""); // "" | "sending" | "ok" | "error"
   const fileInputRef = useRef(null);
   const pdfInputRef = useRef(null);
 
@@ -587,6 +595,25 @@ export default function BlueDinosaurAI() {
     handleReset();
   }
 
+  // Captura de correo para la waitlist Pro cuando el usuario topa la pared.
+  // Mismo patron que ya funciona en la landing: POST a "/" con form-name.
+  async function handleProWaitlist() {
+    const email = proEmail.trim();
+    if (!email || !email.includes("@")) return;
+    setProStatus("sending");
+    try {
+      await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ "form-name": "waitlist", email }).toString(),
+      });
+      setProStatus("ok");
+      track("pro_waitlist", { lens: lens.slug });
+    } catch (e) {
+      setProStatus("error");
+    }
+  }
+
   function handleReset() {
     clearShareURL();
     setSharedData(null);
@@ -596,6 +623,7 @@ export default function BlueDinosaurAI() {
     setCustomAnswer(""); setOriginalIdea("");
     setImages([]); setHistoryStack([]); setPdfDoc(null);
     setRunResult(""); setRunError(""); setRefineNote(""); setRunTrimmed(false);
+    setProEmail(""); setProStatus("");
   }
 
   function clearHistory() {
@@ -875,9 +903,28 @@ export default function BlueDinosaurAI() {
                 <div className="fade-up" style={s.limitBox}>
                   <div style={s.limitTitle}>{t.limitTitle}</div>
                   <div style={s.limitBody}>{t.limitBody}</div>
-                  <button className="run-cta" style={s.limitCta} onClick={() => {/* TODO: enganchar a waitlist Pro / checkout */}}>
-                    {t.limitCta}
-                  </button>
+                  {proStatus === "ok" ? (
+                    <div style={s.proThanks}>{t.proThanks}</div>
+                  ) : (
+                    <>
+                      <div style={s.proRow}>
+                        <input
+                          type="email"
+                          style={s.proInput}
+                          placeholder={t.proPlaceholder}
+                          value={proEmail}
+                          onChange={e => setProEmail(e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter") handleProWaitlist(); }}
+                        />
+                        <button className="run-cta" style={{...s.limitCta, opacity: proStatus === "sending" || !proEmail.trim() ? 0.5 : 1}}
+                          onClick={handleProWaitlist}
+                          disabled={proStatus === "sending" || !proEmail.trim()}>
+                          {proStatus === "sending" ? "…" : t.limitCta}
+                        </button>
+                      </div>
+                      {proStatus === "error" && <div style={s.proError}>{t.proError}</div>}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -995,4 +1042,8 @@ const s = {
   limitTitle: { fontSize: 16, fontWeight: 700, marginBottom: 6 },
   limitBody: { fontSize: 13, opacity: 0.85, marginBottom: 14 },
   limitCta: { display: "inline-block", width: "auto", padding: "10px 22px", background: C.accentLight, border: "none", borderRadius: 8, color: C.accent, fontSize: 14, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", cursor: "pointer", transition: "all 0.15s" },
+  proRow: { display: "flex", gap: 8, marginTop: 4, justifyContent: "center" },
+  proInput: { flex: 1, maxWidth: 240, background: "#fff", border: "none", borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 14, fontFamily: "'DM Sans', sans-serif" },
+  proThanks: { fontSize: 14, fontWeight: 600, color: "#fff", marginTop: 4 },
+  proError: { fontSize: 12, color: "#FFD9D0", marginTop: 8 },
 };
